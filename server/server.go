@@ -23,4 +23,19 @@ func main() {
 
 	fmt.Println("Servidor do Alucinari ouvindo na porta", address)
 
+	// cria loop para as conexões novas
+	for {
+		connection, error := listener.Accept() // aceita nova conexão
+
+		if error != nil {
+			continue
+		}
+
+		go connectionHandler(connection)
+	}
+}
+
+func connectionHandler(connection net.Conn) {
+	defer connection.Close() // vai rodar assim que a função terminar
+
 }
