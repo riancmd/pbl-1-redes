@@ -82,16 +82,12 @@ const (
 )
 
 type BattleArena struct {
-	BID          string // battle ID
-	Player1      *ActiveSession
-	Player2      *ActiveSession
-	State        BattleState
-	CurrentTurn  string
-	Player1Hand  []*Card
-	Player2Hand  []*Card
-	Scoreboard   map[string]int
-	RoundActions chan BattleCommand
-	battleMutex  sync.Mutex
+	BID         string // battle ID
+	Player1     *ActiveSession
+	Player2     *ActiveSession
+	Scoreboard  map[string]int
+	State       BattleState
+	battleMutex sync.Mutex
 }
 
 type BattleCommand struct {
@@ -105,6 +101,5 @@ type BattleCoordinator struct {
 	mutex         sync.RWMutex
 	waitingQueue  []*ActiveSession
 	activeBattles map[string]*BattleArena
-	playerBattles map[string]*BattleArena
 	nextBattleID  int
 }
