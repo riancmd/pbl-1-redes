@@ -80,7 +80,8 @@ const (
 
 type Card struct {
 	Name       string     `json:"name"`
-	CID        string     `json:"CID"` // card ID
+	CID        string     `json:"CID"`  // card ID
+	Desc       string     `json:"desc"` // descrição
 	CardType   CardType   `json:"cardtype"`
 	CardRarity CardRarity `json:"cardrarity"`
 	CardEffect CardEffect `json:"cardeffect"`
