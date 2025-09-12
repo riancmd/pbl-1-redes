@@ -22,7 +22,7 @@ func connectionHandler(connection net.Conn) {
 			return
 		}
 
-		switch request.Tag {
+		switch request.Request {
 		case "something":
 			return
 		}

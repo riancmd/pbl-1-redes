@@ -10,7 +10,7 @@ import (
 
 // mensagem padrão para conversa cliente-servidor
 type Message struct {
-	Request string          `json:"tag"`
+	Request string          `json:"request"`
 	UID     string          `json:"uid"` // user id
 	Data    json.RawMessage `json:"data"`
 }
@@ -28,6 +28,7 @@ type User struct {
 }
 
 // AccountStorage gerencia a persistência das contas
+// AccountStorage é o gerenciador de persistência de dados
 type AccountStorage struct {
 	filename string
 	mutex    sync.RWMutex
@@ -59,11 +60,31 @@ const (
 	Pill CardType = "pill"
 )
 
+type CardRarity string
+
+const (
+	Comum   CardRarity = "comum"
+	Incomum CardRarity = "incomum"
+	Rara    CardRarity = "rara"
+)
+
+type CardEffect string
+
+const (
+	AD   CardEffect = "adormecido"
+	CONS CardEffect = "consciente"
+	PAR  CardEffect = "paralisado"
+	AS   CardEffect = "assustado"
+	NEN  CardEffect = "nenhum"
+)
+
 type Card struct {
-	Name     string   `json:"name"`
-	CID      string   `json:"CID"` // card ID
-	CardType CardType `json:"cardtype"`
-	Points   int      `json:"points"`
+	Name       string     `json:"name"`
+	CID        string     `json:"CID"` // card ID
+	CardType   CardType   `json:"cardtype"`
+	CardRarity CardRarity `json:"cardrarity"`
+	CardEffect CardEffect `json:"cardeffect"`
+	Points     int        `json:"points"`
 }
 
 // banco de cartas
