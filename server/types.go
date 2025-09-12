@@ -121,7 +121,7 @@ type BattleCommand struct {
 // gerenciador de batalhas
 type BattleCoordinator struct {
 	mutex         sync.RWMutex
-	waitingQueue  []*ActiveSession
+	waitingQueue  []*ActiveSession z
 	activeBattles map[string]*BattleArena
 	nextBattleID  int
 }
