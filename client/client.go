@@ -154,14 +154,42 @@ func main() {
 			if !sessionActive {
 				username := prompt(reader, "Nome de usuário: ")
 				pass := prompt(reader, "Senha: ")
+				
 				send(register,map[string]string{"username": username, "password": pass})
 			}
 			prompt(reader, "Você já está conectado...")
 			os.sleep(2)
-		case "2"
+		case "2":
+			login := prompt(reader, "Login: ")
+			pass := prompt(reader, "Senha: ")
+			
+			send("login", map[string]string{"username": username, "password": pass})
+		case "3":
+			if !sessionActive{
+				fmt.Println("Precisa estar logado.")
+				os.sleep(2)
+				continue
+			}
+			send(buyNewPack, map[string]int{"id": sessionID})
+		case "4":
+			if !sessionActive{
+				fmt.Println("Precisa estar logado.")
+				os.sleep(2)
+				continue
+			}
+			printInventory();
+		case "5":
+			if !sessionActive{
+				fmt.Println("Precisa estar logado.")
+				os.sleep(2)
+				continue
+			}
+			send("battle", map[string]int{"id": sessionID})
+		case "6":
+			return
 		}
-	}
 
+	}
 }
 
 // printa e pega input
@@ -260,4 +288,9 @@ func clearScreen() {
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Run()
+}
+
+// função que mostra inventário
+func printInventory(){
+	return
 }
