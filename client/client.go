@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -26,6 +28,28 @@ useCard: usa carta
 giveUp: desiste da batalha
 ping: manda ping
 */
+
+const (
+	register string = "register"
+	login    string = "login"
+	buypack  string = "buyNewPack"
+	battle   string = "battle"
+	usecard  string = "useCard"
+	giveup   string = "giveUp"
+	ping     string = "ping"
+
+	registered string = "registered"
+	loggedin   string = "loggedIn"
+	packbought string = "packBought"
+	enqueued   string = "enqueued"
+	gamestart  string = "gameStart"
+	cardused   string = "cardUsed"
+	newturn    string = "newTurn"
+	newloss    string = "newLoss"
+	newvictory string = "newVictory"
+	newtie     string = "newTie"
+	pong       string = "pong"
+)
 
 type GameMessage struct {
 	PlayerID int             `json:"PlayerID"`
@@ -77,8 +101,8 @@ var (
 
 	hand []Card
 
-	turn sync.RWMutex
-	turn int
+	turnMu sync.RWMutex
+	turn   int
 
 	enc *json.Encoder
 )
@@ -104,11 +128,12 @@ func main() {
 	dec := json.NewDecoder(connection)
 	enc = json.NewEncoder(connection)
 
-	go readRequests(dec) // thread para ler as msgs do servidor
+	go readMsgs(dec) // thread para ler as msgs do servidor
 
 	reader := bufio.NewReader(os.Stdin) // leitura teclado
 
 	for {
+		clearScreen()
 		fmt.Println("\n==============================")
 		fmt.Println(" 🎮 Alucinari - Menu Principal ")
 		fmt.Println("==============================")
@@ -127,15 +152,20 @@ func main() {
 		switch line {
 		case "1":
 			if !sessionActive {
-				return
+				username := prompt(reader, "Nome de usuário: ")
+				pass := prompt(reader, "Senha: ")
+				send(register,map[string]string{"username": username, "password": pass})
 			}
 			prompt(reader, "Você já está conectado...")
+			os.sleep(2)
+		case "2"
 		}
 	}
 
 }
 
-func prompt(reader *bufio.Reader, label string) string { // printa e pega input
+// printa e pega input
+func prompt(reader *bufio.Reader, label string) string {
 	fmt.Print(label)
 	line, _ := reader.ReadString('\n')
 	return strings.TrimSpace(line)
@@ -144,5 +174,90 @@ func prompt(reader *bufio.Reader, label string) string { // printa e pega input
 // envia as solicitações pro servidor
 func send(request string, payload any) {
 	data, _ := json.Marshal(payload)
+	// usa o Encode para enviar pela conexão TCP
 	_ = enc.Encode(Message{Request: request, UID: sessionID, Data: data})
+}
+
+// função que verifica em loop as respostas do servidor
+func readMsgs(dec *json.Decoder) {
+	for {
+		var msg Message
+		if err := dec.Decode(&msg); err != nil {
+			return
+		}
+
+		// verifica cada caso do Request (resposta do server)
+		switch msg.Request {
+		case registered:
+			var temp struct {
+				UID      int
+				Username string `json:"username"`
+			}
+			_ = json.Unmarshal(msg.Data, &temp)
+			fmt.Printf("✅ Criado jogador #%d (%s)\n", temp.UID, temp.Username)
+			fmt.Printf("Você ganhou 4 boosters gratuitos! Eles já estão em seu inventário")
+			sessionActive = true
+		case loggedin:
+			var temp struct {
+				UID      int
+				Username string `json:"username"`
+			}
+			_ = json.Unmarshal(msg.Data, &temp)
+			fmt.Printf("🔓 Login ok! Bem-vindo, %s.\n", temp.UID, temp.Username)
+			sessionActive = true
+		case packbought:
+			var booster []Card
+			_ = json.Unmarshal(msg.Data, &booster)
+			inventory = append(inventory, cards...)
+			fmt.Printf("🎁 Novo booster adquirido! Veja em seu inventário\n")
+		case enqueued:
+			fmt.Printf("⏳ Entrou na fila. Aguardando oponente...")
+		case gamestart:
+			var temp struct {
+				Opponent string `json:"opponent"`
+				Turn     int    `json:"turn"`
+				Hand     []Card `json:"hand"`
+			}
+			_ = json.Unmarshal(msg.Data, &temp)			
+			turn = temp.Turn
+			hand = temp.Hand
+			if turn == sessionID{
+				fmt.Printf("⚔️  Pareado com: %s. Você começa.\n", temp.opponent.)
+			}
+			else{
+				fmt.Printf("⚔️  Pareado com: %s. Seu oponente começa.\n", temp.opponent, temp.)
+			}
+			go gameLoop()
+		case cardused:
+			var temp struct {
+				CID string `json:"CID"`
+				YourSanity int `json:"yoursanity"`
+				OpponentsSanity int `json:"opponentssanity"`
+			}
+
+		case newturn:
+			return
+		case newloss:
+			return
+		case newvictory:
+			return
+		case newtie:
+			return
+		case pong:
+			return
+		}
+	}
+}
+
+// função de limpar a tela
+func clearScreen() {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "cls")
+	default:
+		cmd = exec.Command("clear")
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Run()
 }
