@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 )
 
 var (
-	vault *CardVault
-	users []User
+	vault      *CardVault
+	pm         *PlayerManager
+	registerMu sync.RWMutex
+	loginMu    sync.RWMutex
+	users      []User
 )
 
 func main() {
@@ -28,6 +32,8 @@ func main() {
 	if error != nil {
 		panic(error)
 	}
+
+	pm = NewPlayerManager()
 
 	address := ":8080"          //porta usada
 	envVar := os.Getenv("PORT") // usa env para pode trocar a porta qndo preciso

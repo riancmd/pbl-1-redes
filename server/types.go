@@ -15,6 +15,12 @@ type Message struct {
 	Data    json.RawMessage `json:"data"`
 }
 
+// mensagem temporária com dados do usuário pós-registro
+type PlayerResponse struct{ 
+	UID      string
+	Username string `json:"username"`
+}
+
 /* REQUESTS POSSÍVEIS
 register: registra novo usuário
 login: faz login em conta
@@ -57,6 +63,7 @@ type User struct {
 	LastLogin   time.Time `json:"last_login"`
 	TotalWins   int       `json:"total_wins"`
 	TotalLosses int       `json:"total_losses"`
+	Connection net.Conn
 }
 
 // AccountStorage gerencia a persistência das contas
@@ -87,8 +94,9 @@ type SessionRegistry struct {
 type PlayerManager struct {
 	mu      sync.Mutex
 	nextID  int
-	byID    map[int]*User
-	byLogin map[string]*User
+	byUID    map[string]*User
+	byUsername map[string]*User
+	activeByUID map[string]*User
 }
 
 // sobre as cartas
