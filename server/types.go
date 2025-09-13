@@ -46,6 +46,8 @@ const (
 	enqueued   string = "enqueued"
 	gamestart  string = "gameStart"
 	cardused   string = "cardUsed"
+	notify     string = "notify"
+	updateinfo string = "updateInfo"
 	newturn    string = "newTurn"
 	newloss    string = "newLoss"
 	newvictory string = "newVictory"
@@ -170,7 +172,7 @@ type CardDatabase struct {
 // SISTEMA DE MATCHMAKING
 // mensagem interna de jogo para a goroutine do Match
 type matchMsg struct {
-	PlayerID int
+	PlayerUID string
 	Action   string
 	Data     json.RawMessage
 }
@@ -188,7 +190,7 @@ type Match struct {
 	State   MatchState
 	Turn    string // ID do jogador que joga a próxima ação
 
-	Hand    map[string][]*Card // 7 cartas por jogador
+	Hand    map[string][]*Card // 10 cartas por jogador
 	Sanity   map[string]int     // pontos por jogador
 	DreamStates map[string]DreamState 
 	RoundsInState map[string]int // para controlar duração dos estados

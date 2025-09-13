@@ -46,6 +46,8 @@ const (
 	enqueued   string = "enqueued"
 	gamestart  string = "gameStart"
 	cardused   string = "cardUsed"
+	notify     string = "notify"
+	updateinfo string = "updateInfo"
 	newturn    string = "newTurn"
 	newloss    string = "newLoss"
 	newvictory string = "newVictory"
@@ -80,6 +82,15 @@ const (
 	NEN  CardEffect = "nenhum"
 )
 
+type DreamState string
+
+const (
+	sleepy    DreamState = "adormecido"
+	conscious DreamState = "consciente"
+	paralyzed DreamState = "paralisado"
+	scared    DreamState = "assustado"
+)
+
 type Card struct {
 	Name       string     `json:"name"`
 	CID        string     `json:"CID"`  // card ID
@@ -102,6 +113,9 @@ var (
 	handMu sync.RWMutex
 	hand   []Card
 
+	sanity     int
+	dreamst    DreamState
+	round      int
 	turn       int
 	IsInBattle bool
 	gameResult string
@@ -274,12 +288,28 @@ func readMsgs(dec *json.Decoder) {
 				YourSanity      int    `json:"yoursanity"`
 				OpponentsSanity int    `json:"opponentssanity"`
 			}*/
+		case notify:
+			var temp struct {
+				Message string `json:"message"`
+			}
+			_ = json.Unmarshal(msg.Data, &temp)
+			fmt.Printf("📢 %s\n", temp.Message)
 		case newturn:
 			var temp struct {
 				Turn int `json:"turn"` // vez de quem (1 sua, 2 oponente)
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
 			turn = temp.Turn
+		case updateinfo:
+			var temp struct {
+				Sanity      []int        `json:"sanity"`
+				DreamStates []DreamState `json:"dreamStates"`
+				Round       int          `json:"round"`
+			}
+			_ = json.Unmarshal(msg.Data, &temp)
+			sanity = temp.Sanity[sessionID]
+			dreamst = temp.DreamStates[sessionID]
+			round = temp.Round
 		case newloss:
 			IsInBattle = false
 			gameResult = "loss"
