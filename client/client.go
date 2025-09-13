@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -98,13 +99,16 @@ type Card struct {
 // Estado do cliente
 var (
 	sessionID     int
+	name          string
 	sessionActive bool
 	inventory     []Card
 
-	hand []Card
+	handMu sync.RWMutex
+	hand   []Card
 
-	turnMu sync.RWMutex
-	turn   int
+	turn       int
+	IsInBattle bool
+	gameResult string
 
 	enc *json.Encoder
 )
@@ -189,6 +193,12 @@ func main() {
 			send("battle", map[string]int{"id": sessionID})
 		case "6":
 			testLatency()
+		case "0":
+			fmt.Println("Bons sonhos... 🌙🌃💤")
+			return
+		default:
+			fmt.Println("Opção inválida")
+			time.Sleep(2)
 		}
 
 	}
@@ -227,6 +237,7 @@ func readMsgs(dec *json.Decoder) {
 			fmt.Printf("✅ Criado jogador #%d (%s)\n", temp.UID, temp.Username)
 			fmt.Printf("Você ganhou 4 boosters gratuitos! Eles já estão em seu inventário")
 			sessionActive = true
+			name = temp.Username
 		case loggedin:
 			var temp struct {
 				UID      int
@@ -235,6 +246,7 @@ func readMsgs(dec *json.Decoder) {
 			_ = json.Unmarshal(msg.Data, &temp)
 			fmt.Printf("🔓 Login ok! Bem-vindo, %s.\n", temp.UID, temp.Username)
 			sessionActive = true
+			name = temp.Username
 		case packbought:
 			var booster []Card
 			_ = json.Unmarshal(msg.Data, &booster)
@@ -263,15 +275,21 @@ func readMsgs(dec *json.Decoder) {
 				YourSanity      int    `json:"yoursanity"`
 				OpponentsSanity int    `json:"opponentssanity"`
 			}
-
 		case newturn:
-			return
+			var temp struct {
+				Turn int `json:"turn"` // vez de quem (1 sua, 2 oponente)
+			}
+			_ = json.Unmarshal(msg.Data, &temp)
+			turn = temp.Turn
 		case newloss:
-			return
+			IsInBattle = false
+			gameResult = "loss"
 		case newvictory:
-			return
+			IsInBattle = false
+			gameResult = "victory"
 		case newtie:
-			return
+			IsInBattle = false
+			gameResult = "tie"
 		case pong:
 			return
 		}
@@ -336,6 +354,75 @@ func testLatency() {
 	}
 }
 
+// loop principal de batalha
 func battleOn() {
-	return
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		// verifica se está ou não em batalha ainda
+		if !IsInBattle {
+			// Jogo acabou, mostra resultado final
+			clearScreen()
+			switch gameResult {
+			case "victory":
+				fmt.Println("Seu oponente acorda. Você VENCEU a batalha.")
+			case "loss":
+				fmt.Println("Você acorda. É uma DERROTA... Ou, talvez, um livramento.")
+			case "tie":
+				fmt.Println("Ambos continuam a dormir. É um EMPATE.")
+			default:
+				fmt.Println("🏁 Jogo finalizado!")
+			}
+			fmt.Println("\nPressione ENTER para voltar ao menu...")
+			reader.ReadString('\n')
+			return
+		}
+
+		// rodada caso esteja em batalha
+		clearScreen()
+		fmt.Printf("👁‍🗨 Alucinação...\n")
+		if turn == 1 {
+			fmt.Println("Vez de %s", name)
+			fmt.Println("\n🃏 Sua mão:")
+			for i, card := range hand {
+				fmt.Println("%d) %s [%s %d]\n", i+1, card.Name, strings.ToUpper(string(card.CardType)), card.Points)
+				fmt.Println("%s", card.Desc)
+			}
+
+			s := prompt(reader, "Escolha uma carta (número): ")
+			index, err := strconv.Atoi(s)
+			index -= 1
+
+			if err != nil {
+				fmt.Println("Erro na conversão Ascii to Int")
+				time.Sleep(1)
+				continue
+			}
+
+			if index < 0 || index >= len(hand) {
+				fmt.Println("Opção inválida.")
+				time.Sleep(1)
+				continue
+			}
+
+			chosenCard := hand[index]
+
+			// remove a carta da mão
+			handMu.Lock() // lida com concorrência
+			if index >= 0 && index < lend(hand) {
+				hand = append(hand[:index], hand[index+1:]...)
+			}
+
+			handMu.Unlock()
+
+			// envia a request para jogar a carta
+			data, _ := json.Marshal(map[string]any{"card": chosenCard})
+			_ = enc.Encode(Message{UID: sessionID, Request: usecard, Data: data})
+		} else {
+			fmt.Println("⏳ Aguardando jogada do oponente...")
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+
 }
