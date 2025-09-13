@@ -164,7 +164,7 @@ func main() {
 				send(register, map[string]string{"username": username, "password": pass})
 			}
 			prompt(reader, "Você já está conectado...")
-			time.Sleep(2)
+			time.Sleep(2 * time.Second)
 		case "2":
 			username := prompt(reader, "Login: ")
 			pass := prompt(reader, "Senha: ")
@@ -173,21 +173,21 @@ func main() {
 		case "3":
 			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
-				time.Sleep(2)
+				time.Sleep(2 * time.Second)
 				continue
 			}
 			send(buypack, map[string]int{"id": sessionID})
 		case "4":
 			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
-				time.Sleep(2)
+				time.Sleep(2 * time.Second)
 				continue
 			}
 			printInventory()
 		case "5":
 			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
-				time.Sleep(2)
+				time.Sleep(2 * time.Second)
 				continue
 			}
 			send("battle", map[string]int{"id": sessionID})
@@ -198,7 +198,7 @@ func main() {
 			return
 		default:
 			fmt.Println("Opção inválida")
-			time.Sleep(2)
+			time.Sleep(2 * time.Second)
 		}
 
 	}
@@ -244,7 +244,7 @@ func readMsgs(dec *json.Decoder) {
 				Username string `json:"username"`
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
-			fmt.Printf("🔓 Login ok! Bem-vindo, %s.\n", temp.UID, temp.Username)
+			fmt.Printf("🔓 Login ok! Bem-vindo, %s.\n", temp.Username)
 			sessionActive = true
 			name = temp.Username
 		case packbought:
@@ -265,16 +265,19 @@ func readMsgs(dec *json.Decoder) {
 			hand = temp.Hand
 			if turn == sessionID {
 				fmt.Printf("⚔️  Pareado com: %s. Você começa.\n", temp.Opponent)
+				time.Sleep(2 * time.Second)
 			} else {
 				fmt.Printf("⚔️  Pareado com: %s. Seu oponente começa.\n", temp.Opponent)
+				time.Sleep(2 * time.Second)
 			}
 			go battleOn() // roda batalha
 		case cardused:
-			var temp struct {
+			return
+			/*var temp struct {
 				CID             string `json:"CID"`
 				YourSanity      int    `json:"yoursanity"`
 				OpponentsSanity int    `json:"opponentssanity"`
-			}
+			}*/
 		case newturn:
 			var temp struct {
 				Turn int `json:"turn"` // vez de quem (1 sua, 2 oponente)
@@ -382,11 +385,11 @@ func battleOn() {
 		clearScreen()
 		fmt.Printf("👁‍🗨 Alucinação...\n")
 		if turn == 1 {
-			fmt.Println("Vez de %s", name)
-			fmt.Println("\n🃏 Sua mão:")
+			fmt.Printf("Vez de %s\n", name)
+			fmt.Printf("\n🃏 Sua mão:")
 			for i, card := range hand {
-				fmt.Println("%d) %s [%s %d]\n", i+1, card.Name, strings.ToUpper(string(card.CardType)), card.Points)
-				fmt.Println("%s", card.Desc)
+				fmt.Printf("%d) %s [%s %d]\n", i+1, card.Name, strings.ToUpper(string(card.CardType)), card.Points)
+				fmt.Printf("%s\n", card.Desc)
 			}
 
 			s := prompt(reader, "Escolha uma carta (número): ")
@@ -395,13 +398,13 @@ func battleOn() {
 
 			if err != nil {
 				fmt.Println("Erro na conversão Ascii to Int")
-				time.Sleep(1)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 
 			if index < 0 || index >= len(hand) {
 				fmt.Println("Opção inválida.")
-				time.Sleep(1)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 
@@ -409,7 +412,7 @@ func battleOn() {
 
 			// remove a carta da mão
 			handMu.Lock() // lida com concorrência
-			if index >= 0 && index < lend(hand) {
+			if index >= 0 && index < len(hand) {
 				hand = append(hand[:index], hand[index+1:]...)
 			}
 
