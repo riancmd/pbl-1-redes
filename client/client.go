@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 // mensagem padrão para conversa cliente-servidor
@@ -96,8 +97,9 @@ type Card struct {
 
 // Estado do cliente
 var (
-	sessionID int
-	inventory []Card
+	sessionID     int
+	sessionActive bool
+	inventory     []Card
 
 	hand []Card
 
@@ -154,39 +156,39 @@ func main() {
 			if !sessionActive {
 				username := prompt(reader, "Nome de usuário: ")
 				pass := prompt(reader, "Senha: ")
-				
-				send(register,map[string]string{"username": username, "password": pass})
+
+				send(register, map[string]string{"username": username, "password": pass})
 			}
 			prompt(reader, "Você já está conectado...")
-			os.sleep(2)
+			time.Sleep(2)
 		case "2":
-			login := prompt(reader, "Login: ")
+			username := prompt(reader, "Login: ")
 			pass := prompt(reader, "Senha: ")
-			
+
 			send("login", map[string]string{"username": username, "password": pass})
 		case "3":
-			if !sessionActive{
+			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
-				os.sleep(2)
+				time.Sleep(2)
 				continue
 			}
-			send(buyNewPack, map[string]int{"id": sessionID})
+			send(buypack, map[string]int{"id": sessionID})
 		case "4":
-			if !sessionActive{
+			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
-				os.sleep(2)
+				time.Sleep(2)
 				continue
 			}
-			printInventory();
+			printInventory()
 		case "5":
-			if !sessionActive{
+			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
-				os.sleep(2)
+				time.Sleep(2)
 				continue
 			}
 			send("battle", map[string]int{"id": sessionID})
 		case "6":
-			return
+			testLatency()
 		}
 
 	}
@@ -236,7 +238,7 @@ func readMsgs(dec *json.Decoder) {
 		case packbought:
 			var booster []Card
 			_ = json.Unmarshal(msg.Data, &booster)
-			inventory = append(inventory, cards...)
+			inventory = append(inventory, booster...)
 			fmt.Printf("🎁 Novo booster adquirido! Veja em seu inventário\n")
 		case enqueued:
 			fmt.Printf("⏳ Entrou na fila. Aguardando oponente...")
@@ -246,21 +248,20 @@ func readMsgs(dec *json.Decoder) {
 				Turn     int    `json:"turn"`
 				Hand     []Card `json:"hand"`
 			}
-			_ = json.Unmarshal(msg.Data, &temp)			
+			_ = json.Unmarshal(msg.Data, &temp)
 			turn = temp.Turn
 			hand = temp.Hand
-			if turn == sessionID{
-				fmt.Printf("⚔️  Pareado com: %s. Você começa.\n", temp.opponent.)
+			if turn == sessionID {
+				fmt.Printf("⚔️  Pareado com: %s. Você começa.\n", temp.Opponent)
+			} else {
+				fmt.Printf("⚔️  Pareado com: %s. Seu oponente começa.\n", temp.Opponent)
 			}
-			else{
-				fmt.Printf("⚔️  Pareado com: %s. Seu oponente começa.\n", temp.opponent, temp.)
-			}
-			go gameLoop()
+			go battleOn() // roda batalha
 		case cardused:
 			var temp struct {
-				CID string `json:"CID"`
-				YourSanity int `json:"yoursanity"`
-				OpponentsSanity int `json:"opponentssanity"`
+				CID             string `json:"CID"`
+				YourSanity      int    `json:"yoursanity"`
+				OpponentsSanity int    `json:"opponentssanity"`
 			}
 
 		case newturn:
@@ -291,6 +292,50 @@ func clearScreen() {
 }
 
 // função que mostra inventário
-func printInventory(){
+func printInventory() {
+	return
+}
+
+// função para ping
+func testLatency() {
+	serverAddr, err := net.ResolveUDPAddr("udp", ":8081")
+	if err != nil {
+		fmt.Printf("❌ Erro ao resolver endereço: %v\n", err)
+		return
+	}
+
+	connection, err := net.DialUDP("udp", nil, serverAddr)
+	if err != nil {
+		fmt.Printf("❌ Erro ao conectar: %v\n", err)
+		return
+	}
+	defer connection.Close()
+
+	// timeout de 999 ms
+	connection.SetReadDeadline(time.Now().Add(999 * time.Millisecond))
+
+	start := time.Now()
+	_, err = connection.Write([]byte("ping"))
+	if err != nil {
+		fmt.Printf("❌ Erro ao enviar ping: %v\n", err)
+		return
+	}
+
+	buffer := make([]byte, 1024)
+	n, _, err := connection.ReadFromUDP(buffer)
+	if err != nil {
+		fmt.Printf("⏰ Timeout: %v\n", err)
+		return
+	}
+
+	if string(buffer[:n]) == "pong" {
+		elapsed := time.Since(start).Milliseconds()
+		fmt.Printf("🏓 Latência: %d ms\n", elapsed)
+	} else {
+		fmt.Printf("❌ Resposta inválida: %s\n", string(buffer[:n]))
+	}
+}
+
+func battleOn() {
 	return
 }
