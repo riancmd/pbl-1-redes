@@ -10,6 +10,7 @@ import (
 var (
 	vault      *CardVault
 	pm         *PlayerManager
+	mm         *MatchManager
 	registerMu sync.RWMutex
 	loginMu    sync.RWMutex
 	users      []User

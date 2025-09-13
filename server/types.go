@@ -63,7 +63,8 @@ type User struct {
 	LastLogin   time.Time `json:"last_login"`
 	TotalWins   int       `json:"total_wins"`
 	TotalLosses int       `json:"total_losses"`
-	Connection net.Conn
+	IsInBattle  bool
+	Connection  net.Conn
 }
 
 // AccountStorage gerencia a persistência das contas
@@ -155,6 +156,42 @@ type CardVault struct {
 // struct pra base de dados local das cartas em json porem virtualizada
 type CardDatabase struct {
 	Cards map[string]Card `json:"cards"`
+}
+
+// SISTEMA DE MATCHMAKING
+// mensagem interna de jogo para a goroutine do Match
+type matchMsg struct {
+	PlayerID int
+	Action   string
+	Data     json.RawMessage
+}
+
+type MatchState int
+const (
+	Waiting MatchState = iota
+	Running
+	Finished
+)
+
+type Match struct {
+	ID      int
+	P1, P2  *Player
+	State   MatchState
+	Turn    string // ID do jogador que joga a próxima ação
+
+	Hand    map[string][]*Card // 7 cartas por jogador
+	Sanity   map[string]int     // pontos por jogador
+
+	inbox   chan matchMsg // canal para trocar msgs entre threads
+	mu      sync.Mutex
+}
+
+type MatchManager struct {
+	mu       sync.Mutex
+	queue    []*Player
+	nextID   int
+	matches  map[int]*Match
+	byPlayer map[string]*Match
 }
 
 // SISTEMA DE BATALHAS
