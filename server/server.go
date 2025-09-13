@@ -32,6 +32,7 @@ func main() {
 		}
 
 		go connectionHandler(connection)
+		go handlePing()
 	}
 }
 

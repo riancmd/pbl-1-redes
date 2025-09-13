@@ -88,10 +88,25 @@ type Card struct {
 	Points     int        `json:"points"`
 }
 
+type Booster struct {
+	BID int
+	Booster []Card
+}
+
 // banco de cartas
 type CardVault struct {
-	vault     []Card
-	generator *rand.Rand
+	CardGlossary [string]Card
+	CardQuantity [string]int
+
+	Vault     [int]Booster
+	BoosterQuantity int
+	Total int
+	Generator *rand.Rand
+}
+
+// struct pra base de dados local das cartas em json porem virtualizada
+type CardDatabase struct {
+	Cards map[string]Card `json:"cards"`
 }
 
 // sistema de batalhas
