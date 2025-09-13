@@ -101,7 +101,9 @@ var (
 	sessionID     int
 	name          string
 	sessionActive bool
-	inventory     []Card
+
+	invMu     sync.RWMutex
+	inventory []Card
 
 	handMu sync.RWMutex
 	hand   []Card
@@ -314,7 +316,21 @@ func clearScreen() {
 
 // função que mostra inventário
 func printInventory() {
-	return
+	invMu.RLock()
+	defer invMu.RUnlock()
+
+	if len(inventory) == 0 {
+		fmt.Println("Inventário vazio.")
+		time.Sleep(1 * time.Second)
+		return
+	}
+	fmt.Println("\n📦 Inventário:")
+	for i, c := range inventory {
+		fmt.Printf("%2d) %-16s [%s %d]\n", c.CID, c.Name, strings.ToUpper(string(c.CardType)), c.Points)
+		fmt.Printf("♦ Raridade: %s\n")
+		fmt.Printf("✨ Efeito: %s\n", c.CardEffect)
+		fmt.Printf("%s\n", c.Desc)
+	}
 }
 
 // função para ping
