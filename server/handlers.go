@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"encoding/json"
@@ -52,8 +52,8 @@ func handleRegister(request Message, encoder *json.Encoder) {
 	defer registerMu.Unlock()
 	// crio var temp para guardar as infos
 	var temp struct {
-		Username,
-		Password string
+		Username string `json:"username"`
+		Password string `json:"password"`
 	}
 
 	// desserializo dados em temp

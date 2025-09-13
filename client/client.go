@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"bufio"
@@ -17,7 +17,7 @@ import (
 // mensagem padrão para conversa cliente-servidor
 type Message struct {
 	Request string          `json:"request"`
-	UID     int             `json:"uid"` // user id
+	UID     string          `json:"uid"` // user id
 	Data    json.RawMessage `json:"data"`
 }
 
@@ -103,7 +103,7 @@ type Card struct {
 
 // Estado do cliente
 var (
-	sessionID     int
+	sessionID     string
 	name          string
 	sessionActive bool
 
@@ -116,7 +116,7 @@ var (
 	sanity     int
 	dreamst    DreamState
 	round      int
-	turn       int
+	turn       string
 	IsInBattle bool
 	gameResult string
 
@@ -186,7 +186,7 @@ func main() {
 				time.Sleep(2 * time.Second)
 				continue
 			}
-			send(buypack, map[string]int{"id": sessionID})
+			send(buypack, map[string]string{"id": sessionID})
 		case "4":
 			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
@@ -200,7 +200,7 @@ func main() {
 				time.Sleep(2 * time.Second)
 				continue
 			}
-			send("battle", map[string]int{"id": sessionID})
+			send("battle", map[string]string{"id": sessionID})
 		case "6":
 			testLatency()
 		case "0":
@@ -267,7 +267,7 @@ func readMsgs(dec *json.Decoder) {
 		case gamestart:
 			var temp struct {
 				Opponent string `json:"opponent"`
-				Turn     int    `json:"turn"`
+				Turn     string `json:"turn"`
 				Hand     []Card `json:"hand"`
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
@@ -296,15 +296,15 @@ func readMsgs(dec *json.Decoder) {
 			fmt.Printf("📢 %s\n", temp.Message)
 		case newturn:
 			var temp struct {
-				Turn int `json:"turn"` // vez de quem (1 sua, 2 oponente)
+				Turn string `json:"turn"` // vez de quem (1 sua, 2 oponente)
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
 			turn = temp.Turn
 		case updateinfo:
 			var temp struct {
-				Sanity      []int        `json:"sanity"`
-				DreamStates []DreamState `json:"dreamStates"`
-				Round       int          `json:"round"`
+				Sanity      map[string]int        `json:"sanity"`
+				DreamStates map[string]DreamState `json:"dreamStates"`
+				Round       int                   `json:"round"`
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
 			sanity = temp.Sanity[sessionID]
@@ -349,11 +349,12 @@ func printInventory() {
 		return
 	}
 	fmt.Println("\n📦 Inventário:")
-	for i, c := range inventory {
+	for _, c := range inventory {
 		fmt.Printf("%2d) %-16s [%s %d]\n", c.CID, c.Name, strings.ToUpper(string(c.CardType)), c.Points)
 		fmt.Printf("♦ Raridade: %s\n")
 		fmt.Printf("✨ Efeito: %s\n", c.CardEffect)
 		fmt.Printf("%s\n", c.Desc)
+
 	}
 }
 
@@ -424,7 +425,7 @@ func battleOn() {
 		// rodada caso esteja em batalha
 		clearScreen()
 		fmt.Printf("👁‍🗨 Alucinação...\n")
-		if turn == 1 {
+		if turn == sessionID {
 			fmt.Printf("Vez de %s\n", name)
 			fmt.Printf("\n🃏 Sua mão:")
 			for i, card := range hand {

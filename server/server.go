@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"fmt"
@@ -13,12 +13,12 @@ var (
 	mm         *MatchManager
 	registerMu sync.RWMutex
 	loginMu    sync.RWMutex
-	users      []User
 )
 
 func main() {
 	// criar vault
 	vault = NewCardVault()
+
 	error := vault.LoadCardsFromFile("data/cardVault.json")
 
 	// verifica se realmente criou o estoque

@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ func (mm *MatchManager) Enqueue(p *User) error {
 
 	// evita-se duplicata na fila
 	for _, q := range mm.queue {
-		if q.ID == p.UID {
+		if q.UID == p.UID {
 			return errors.New("player já está na fila")
 		}
 	}
@@ -81,8 +81,8 @@ func (mm *MatchManager) matchmakingLoop() {
 // gerencia a batalha
 func (m *Match) run() {
 	// cria codificadores para cada usuário
-	enc1 := json.NewEncoder(m.P1.Conn)
-	enc2 := json.NewEncoder(m.P2.Conn)
+	enc1 := json.NewEncoder(m.P1.Connection)
+	enc2 := json.NewEncoder(m.P2.Connection)
 
 	// são ajustados os estados de sonho de cada jogador
 	m.RoundsInState = map[string]int{m.P1.UID: 0, m.P2.UID: 0}
@@ -90,8 +90,8 @@ func (m *Match) run() {
 	m.currentRound = 1
 
 	// são escolhidas 10 cartas aleatórias do inventário de cada jogador
-	m.Hand[m.P1.ID] = drawCards(m.P1.Inventory)
-	m.Hand[m.P2.ID] = drawCards(m.P2.Inventory)
+	m.Hand[m.P1.UID] = drawCards(m.P1.Deck)
+	m.Hand[m.P2.UID] = drawCards(m.P2.Deck)
 
 	m.sendGameStart(enc1, enc2)
 
@@ -142,7 +142,7 @@ func (m *Match) sendGameStart(enc1, enc2 *json.Encoder) {
 
 	// Payload para P1
 	p1Payload := startPayload{
-		Info:        m.P2.UserName,
+		Info:        m.P2.Username,
 		Turn:        m.Turn,
 		Hand:        m.Hand[m.P1.UID],
 		Sanity:      m.Sanity,
@@ -151,7 +151,7 @@ func (m *Match) sendGameStart(enc1, enc2 *json.Encoder) {
 
 	// Payload para P2
 	p2Payload := startPayload{
-		Info:        m.P1.UserName,
+		Info:        m.P1.Username,
 		Turn:        m.Turn,
 		Hand:        m.Hand[m.P2.UID],
 		Sanity:      m.Sanity,
@@ -227,7 +227,7 @@ func (m *Match) endGame(enc1, enc2 *json.Encoder) {
 
 	// uma mensagem pra cada usuário contendo o resultado
 	msg1 := Message{Request: response1}
-	msg2 := Message{Request: response1}
+	msg2 := Message{Request: response2}
 
 	data1, _ := json.Marshal(payload)
 	data2, _ := json.Marshal(payload)
@@ -391,16 +391,13 @@ func (m *Match) handleUseCard(enc1, enc2 *json.Encoder, in matchMsg) bool {
 func (m *Match) handleGiveUp(enc1, enc2 *json.Encoder, in matchMsg) {
 	// determinar qual encoder corresponde a cada jogador
 	var playerEnc, opponentEnc *json.Encoder
-	var opponentName string
 
 	if in.PlayerUID == m.P1.UID {
 		playerEnc = enc1
 		opponentEnc = enc2
-		opponentName = m.P2.UserName
 	} else {
 		playerEnc = enc2
 		opponentEnc = enc1
-		opponentName = m.P1.UserName
 	}
 
 	// enviar derrota para quem desistiu

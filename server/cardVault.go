@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"encoding/json"
@@ -41,10 +41,10 @@ func NewCardVault() *CardVault {
 
 // função para verificar se está vazio
 func (vault *CardVault) IsEmpty() bool {
-	return vault.Total == 0 && vault.BoosterQuantity == 0
+	return len(vault.CardGlossary) == 0
 }
 
-// inicializar o vault com as cartas da base
+// inicializa o vault com as cartas da base
 func (vault *CardVault) LoadCardsFromFile(filename string) error {
 	cards, error := InitializeCardsFromJSON(filename)
 	if error != nil {

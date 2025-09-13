@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"encoding/json"
@@ -16,7 +16,7 @@ type Message struct {
 }
 
 // mensagem temporária com dados do usuário pós-registro
-type PlayerResponse struct{ 
+type PlayerResponse struct {
 	UID      string
 	Username string `json:"username"`
 }
@@ -95,10 +95,10 @@ type SessionRegistry struct {
 
 // gerenciador de jogadores
 type PlayerManager struct {
-	mu      sync.Mutex
-	nextID  int
-	byUID    map[string]*User
-	byUsername map[string]*User
+	mu          sync.Mutex
+	nextID      int
+	byUID       map[string]*User
+	byUsername  map[string]*User
 	activeByUID map[string]*User
 }
 
@@ -149,19 +149,19 @@ type Card struct {
 }
 
 type Booster struct {
-	BID int
+	BID     int
 	Booster []Card
 }
 
 // BANCO DE CARTAS
 type CardVault struct {
-	CardGlossary [string]Card
-	CardQuantity [string]int
+	CardGlossary map[string]Card
+	CardQuantity map[string]int
 
-	Vault     [int]Booster
+	Vault           map[int]Booster
 	BoosterQuantity int
-	Total int
-	Generator *rand.Rand
+	Total           int
+	Generator       *rand.Rand
 }
 
 // struct pra base de dados local das cartas em json porem virtualizada
@@ -173,11 +173,12 @@ type CardDatabase struct {
 // mensagem interna de jogo para a goroutine do Match
 type matchMsg struct {
 	PlayerUID string
-	Action   string
-	Data     json.RawMessage
+	Action    string
+	Data      json.RawMessage
 }
 
 type MatchState int
+
 const (
 	Waiting MatchState = iota
 	Running
@@ -185,25 +186,25 @@ const (
 )
 
 type Match struct {
-	ID      int
-	P1, P2  *Player
-	State   MatchState
-	Turn    string // ID do jogador que joga a próxima ação
+	ID     int
+	P1, P2 *User
+	State  MatchState
+	Turn   string // ID do jogador que joga a próxima ação
 
-	Hand    map[string][]*Card // 10 cartas por jogador
-	Sanity   map[string]int     // pontos por jogador
-	DreamStates map[string]DreamState 
-	RoundsInState map[string]int // para controlar duração dos estados
-    StateLockedUntil map[string]int // para controlar quando pode mudar estado
-	currentRound int
+	Hand             map[string][]*Card // 10 cartas por jogador
+	Sanity           map[string]int     // pontos por jogador
+	DreamStates      map[string]DreamState
+	RoundsInState    map[string]int // para controlar duração dos estados
+	StateLockedUntil map[string]int // para controlar quando pode mudar estado
+	currentRound     int
 
-	inbox   chan matchMsg // canal para trocar msgs entre threads
-	mu      sync.Mutex
+	inbox chan matchMsg // canal para trocar msgs entre threads
+	mu    sync.Mutex
 }
 
 type MatchManager struct {
 	mu       sync.Mutex
-	queue    []*Player
+	queue    []*User
 	nextID   int
 	matches  map[int]*Match
 	byPlayer map[string]*Match
@@ -236,7 +237,7 @@ type BattleCommand struct {
 // gerenciador de batalhas
 type BattleCoordinator struct {
 	mutex         sync.RWMutex
-	waitingQueue  []*ActiveSession z
+	waitingQueue  []*ActiveSession
 	activeBattles map[string]*BattleArena
 	nextBattleID  int
 }
