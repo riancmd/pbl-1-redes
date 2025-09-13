@@ -34,3 +34,18 @@ func main() {
 		go connectionHandler(connection)
 	}
 }
+
+func handlePing() {
+	address, _ := net.ResolveUDPAddr("udp", ":8081")
+	connection, _ := net.ListenUDP("udp", address)
+	defer connection.Close()
+
+	buffer := make([]byte, 1024)
+	for {
+		n, remote, _ := connection.ReadFromUDP(buffer)
+		msg := string(buffer[:n])
+		if msg == "ping" {
+			connection.WriteToUDP([]byte("pong"), remote)
+		}
+	}
+}
