@@ -53,12 +53,6 @@ const (
 	pong       string = "pong"
 )
 
-type GameMessage struct {
-	PlayerID int             `json:"PlayerID"`
-	Action   string          `json:"action"`
-	Data     json.RawMessage `json:"data"`
-}
-
 // sobre as cartas
 type CardType string
 

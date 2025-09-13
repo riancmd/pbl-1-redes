@@ -188,3 +188,88 @@ func (vault *CardVault) calculateCardCopies(boostersCount int) map[string]int {
 
 	return copies
 }
+
+// crio um "pool" de cartas baseado nas cópias calculadas
+// esse bolo de cartas é utilizado na hora de criar os boosters
+func (vault *CardVault) createCardPool(copies map[string]int) []Card {
+	var pool []Card
+
+	for cid, quantity := range copies {
+		card := vault.CardGlossary[cid]
+		for i := 0; i < quantity; i++ {
+			pool = append(pool, card)
+		}
+		// Atualiza estoque
+		vault.CardQuantity[cid] += quantity
+	}
+
+	return pool
+}
+
+// cria os boosters
+func (vault *CardVault) createBoosters(boostersCount int) error {
+	if vault.IsEmpty() {
+		return fmt.Errorf("CardVault não foi inicializado com cartas")
+	}
+
+	// calculo quantas cópias de cada carta são necessárias
+	copies := vault.calculateCardCopies(boostersCount)
+
+	// crio o pool de cartas
+	cardPool := vault.createCardPool(copies)
+
+	// embaralho o pool com o generator
+	vault.Generator.Shuffle(len(cardPool), func(i, j int) {
+		cardPool[i], cardPool[j] = cardPool[j], cardPool[i]
+	})
+
+	// crio os boosters individualmente
+	for i := 0; i < boostersCount; i++ {
+		booster := Booster{
+			BID:     i + 1,
+			Booster: make([]Card, 0, CARDS_PER_BOOSTER),
+		}
+
+		// pego as próximas n cartas do pool
+		startIndex := i * CARDS_PER_BOOSTER
+		endIndex := startIndex + CARDS_PER_BOOSTER
+
+		// verifico se ainda tá dentro do tamanho do pool
+		if endIndex > len(cardPool) {
+			endIndex = len(cardPool)
+		}
+
+		// acrescento as cartas
+		for j := startIndex; j < endIndex; j++ {
+			booster.Booster = append(booster.Booster, cardPool[j])
+		}
+
+		vault.Vault[i+1] = booster
+	}
+	vault.BoosterQuantity = boostersCount
+	vault.Total = boostersCount * CARDS_PER_BOOSTER
+
+	return nil
+}
+
+// remover um booster do estoque (para dar ao jogador)
+func (vault *CardVault) TakeBooster() (Booster, error) {
+	if vault.BoosterQuantity == 0 {
+		return Booster{}, fmt.Errorf("não há boosters disponíveis")
+	}
+
+	// Pega um booster aleatório
+	boosterIDs := make([]int, 0, len(vault.Vault))
+	for id := range vault.Vault {
+		boosterIDs = append(boosterIDs, id)
+	}
+
+	randomIndex := vault.Generator.Intn(len(boosterIDs))
+	boosterID := boosterIDs[randomIndex]
+
+	booster := vault.Vault[boosterID]
+	delete(vault.Vault, boosterID)
+	vault.BoosterQuantity--
+
+	return booster, nil
+}

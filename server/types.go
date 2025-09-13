@@ -15,6 +15,38 @@ type Message struct {
 	Data    json.RawMessage `json:"data"`
 }
 
+/* REQUESTS POSSÍVEIS
+register: registra novo usuário
+login: faz login em conta
+buyNewPack: compra pacote novo de cartas
+battle: coloca usuário na fila
+useCard: usa carta
+giveUp: desiste da batalha
+ping: manda ping
+*/
+
+const (
+	register string = "register"
+	login    string = "login"
+	buypack  string = "buyNewPack"
+	battle   string = "battle"
+	usecard  string = "useCard"
+	giveup   string = "giveUp"
+	ping     string = "ping"
+
+	registered string = "registered"
+	loggedin   string = "loggedIn"
+	packbought string = "packBought"
+	enqueued   string = "enqueued"
+	gamestart  string = "gameStart"
+	cardused   string = "cardUsed"
+	newturn    string = "newTurn"
+	newloss    string = "newLoss"
+	newvictory string = "newVictory"
+	newtie     string = "newTie"
+	pong       string = "pong"
+)
+
 // registro do usuário (dado persistente)
 type User struct {
 	UID         string    `json:"uid"`

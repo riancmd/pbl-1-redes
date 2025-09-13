@@ -6,7 +6,29 @@ import (
 	"os"
 )
 
+var (
+	vault *CardVault
+	users []User
+)
+
 func main() {
+	// criar vault
+	vault = NewCardVault()
+	error := vault.LoadCardsFromFile("data/cardVault.json")
+
+	// verifica se realmente criou o estoque
+	if error != nil {
+		panic(error)
+	}
+
+	// cria os boosters, adicionando-o
+	error = vault.createBoosters(1000)
+
+	// verifica se realmente criou os boosters
+	if error != nil {
+		panic(error)
+	}
+
 	address := ":8080"          //porta usada
 	envVar := os.Getenv("PORT") // usa env para pode trocar a porta qndo preciso
 

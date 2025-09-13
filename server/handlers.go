@@ -23,7 +23,21 @@ func connectionHandler(connection net.Conn) {
 		}
 
 		switch request.Request {
-		case "something":
+		case register:
+			return
+		case login:
+			return
+		case buypack:
+			return
+		case battle:
+			return
+		case usecard:
+			return
+		case giveup:
+			return
+		case ping:
+			return
+		default:
 			return
 		}
 
