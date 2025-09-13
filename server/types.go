@@ -127,6 +127,15 @@ const (
 	NEN  CardEffect = "nenhum"
 )
 
+type DreamState string
+
+const (
+	sleepy    DreamState = "adormecido"
+	conscious DreamState = "consciente"
+	paralyzed DreamState = "paralisado"
+	scared    DreamState = "assustado"
+)
+
 type Card struct {
 	Name       string     `json:"name"`
 	CID        string     `json:"CID"`  // card ID
@@ -181,6 +190,10 @@ type Match struct {
 
 	Hand    map[string][]*Card // 7 cartas por jogador
 	Sanity   map[string]int     // pontos por jogador
+	DreamStates map[string]DreamState 
+	RoundsInState map[string]int // para controlar duração dos estados
+    StateLockedUntil map[string]int // para controlar quando pode mudar estado
+	currentRound int
 
 	inbox   chan matchMsg // canal para trocar msgs entre threads
 	mu      sync.Mutex
