@@ -83,6 +83,14 @@ type SessionRegistry struct {
 	nextSID  int
 }
 
+// gerenciador de jogadores
+type PlayerManager struct {
+	mu      sync.Mutex
+	nextID  int
+	byID    map[int]*User
+	byLogin map[string]*User
+}
+
 // sobre as cartas
 type CardType string
 
@@ -125,7 +133,7 @@ type Booster struct {
 	Booster []Card
 }
 
-// banco de cartas
+// BANCO DE CARTAS
 type CardVault struct {
 	CardGlossary [string]Card
 	CardQuantity [string]int
@@ -141,7 +149,7 @@ type CardDatabase struct {
 	Cards map[string]Card `json:"cards"`
 }
 
-// sistema de batalhas
+// SISTEMA DE BATALHAS
 type BattleState int
 
 const (

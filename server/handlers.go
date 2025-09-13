@@ -24,22 +24,65 @@ func connectionHandler(connection net.Conn) {
 
 		switch request.Request {
 		case register:
-			return
+			handleRegister(request, encoder)
 		case login:
-			return
+			handleLogin(request, encoder, connection)
 		case buypack:
-			return
+			handleBuyPack(msg, encoder)
 		case battle:
-			return
+			handleBattle(msg, encoder)
 		case usecard:
-			return
+			handleUseCard(msg, encoder)
 		case giveup:
-			return
+			handleGiveUp(msg, encoder)
 		case ping:
-			return
+			handlePing(encoder)
 		default:
 			return
 		}
 
 	}
+}
+
+// lida com o registro
+func handleRegister(request Message, encoder *json.Encoder) {
+	// crio var temp para guardar as infos
+	var temp struct {
+		Username,
+		Password string
+	}
+
+	if err := json.Unmarshal(request.Data, &temp); err != nil {
+		sendError(encoder, err)
+		return
+	}
+
+}
+
+func handleLogin(request Message, encoder *json.Encoder, connection net.Conn) {
+	return
+}
+
+func handleBuyPack(request Message, encoder *json.Encoder) {
+	return
+}
+
+func handleBattle(request Message, encoder *json.Encoder) {
+	return
+}
+
+func handleUseCard(request Message, encoder *json.Encoder) {
+	return
+}
+
+func handleGiveUp(request Message, encoder *json.Encoder) {
+	return
+}
+
+func handlePing(encoder *json.Encoder) {
+	return
+}
+
+func sendError(*json.Encoder, error) {
+	return
 }

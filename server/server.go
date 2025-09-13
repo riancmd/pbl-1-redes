@@ -54,11 +54,11 @@ func main() {
 		}
 
 		go connectionHandler(connection)
-		go handlePing()
+		go handlerPing()
 	}
 }
 
-func handlePing() {
+func handlerPing() {
 	address, _ := net.ResolveUDPAddr("udp", ":8081")
 	connection, _ := net.ListenUDP("udp", address)
 	defer connection.Close()
