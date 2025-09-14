@@ -16,13 +16,15 @@ var (
 )
 
 func main() {
-	// criar vault
+	// cria vault e mm
 	vault = NewCardVault()
+	mm = NewMatchManager()
 
 	error := vault.LoadCardsFromFile("data/cardVault.json")
 
 	// verifica se realmente criou o estoque
 	if error != nil {
+		fmt.Println("Erro ao criar estoque") // debug
 		panic(error)
 	}
 
@@ -31,6 +33,7 @@ func main() {
 
 	// verifica se realmente criou os boosters
 	if error != nil {
+		fmt.Println("Erro ao criar boosters") // debug
 		panic(error)
 	}
 
@@ -51,7 +54,8 @@ func main() {
 
 	// verifica erro na conexão
 	if error != nil {
-		panic(error) // para a execução e sinaliza erro
+		fmt.Println("Erro ao criar listener") // debug
+		panic(error)                          // para a execução e sinaliza erro
 	}
 
 	fmt.Println("Servidor do Alucinari ouvindo na porta", address)

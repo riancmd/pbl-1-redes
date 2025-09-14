@@ -282,7 +282,7 @@ func readMsgs(dec *json.Decoder) {
 			}
 			go battleOn() // roda batalha
 		case cardused:
-			return
+			println("Carta usada")
 			/*var temp struct {
 				CID             string `json:"CID"`
 				YourSanity      int    `json:"yoursanity"`
@@ -319,8 +319,12 @@ func readMsgs(dec *json.Decoder) {
 		case newtie:
 			IsInBattle = false
 			gameResult = "tie"
-		case pong:
-			return
+		case "erro":
+			var temp struct {
+				Error error `json:"error"`
+			}
+			_ = json.Unmarshal(msg.Data, &temp)
+			fmt.Printf("%s", temp.Error)
 		}
 	}
 }

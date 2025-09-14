@@ -5,8 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 )
+
+// newMatchanager
+func NewMatchManager() *MatchManager {
+	return &MatchManager{
+		mu:       sync.Mutex{},
+		queue:    []*User{},
+		nextID:   1,
+		matches:  make(map[int]*Match),
+		byPlayer: make(map[string]*Match),
+	}
+}
 
 // coloca usuário na fila
 func (mm *MatchManager) Enqueue(p *User) error {
