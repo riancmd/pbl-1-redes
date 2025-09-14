@@ -17,7 +17,7 @@ type Message struct {
 
 // mensagem temporária com dados do usuário pós-registro
 type PlayerResponse struct {
-	UID      string
+	UID      string `json:"UID"`
 	Username string `json:"username"`
 }
 

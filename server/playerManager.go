@@ -34,7 +34,7 @@ func (pm *PlayerManager) CreatePlayer(username, password string) (*User, error) 
 	}
 	pm.byUID[p.UID] = p
 	pm.byUsername[p.Username] = p
-	pm.activeByUID[p.Username] = p
+	pm.activeByUID[p.UID] = p
 	return p, nil
 }
 

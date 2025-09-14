@@ -85,11 +85,18 @@ func handleLogin(request Message, encoder *json.Encoder, connection net.Conn) {
 
 	// evita múltiplos logins do mesmo usuário
 	loginMu.Lock()
-	if _, ok := pm.activeByUID[r.Login]; ok {
-		loginMu.Unlock()
+	p, exists := pm.byUsername[r.Login]
+
+	if !exists {
+		sendError(encoder, errors.New("usuário não encontrado"))
+		return
+	}
+
+	if _, ok := pm.activeByUID[p.UID]; ok {
 		sendError(encoder, errors.New("usuário já logado"))
 		return
 	}
+
 	loginMu.Unlock()
 
 	p, err := pm.Login(r.Login, r.Password, connection)
@@ -140,6 +147,10 @@ func handleBuyBooster(request Message, encoder *json.Encoder) {
 	}
 
 	pm.AddToDeck(p.UID, cardPointers)
+
+	// envia resposta
+	data, _ := json.Marshal(cards)
+	_ = encoder.Encode(Message{Request: packbought, Data: data})
 }
 
 // lida com pareamento
@@ -167,11 +178,11 @@ func handleEnqueue(request Message, encoder *json.Encoder) {
 
 func sendError(encoder *json.Encoder, erro error) {
 	type payload struct {
-		Error error `json:"error"`
+		Error string `json:"error"`
 	}
 
 	pld := payload{
-		Error: erro,
+		Error: erro.Error(),
 	}
 
 	// uma mensagem contendo erro

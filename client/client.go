@@ -124,7 +124,7 @@ var (
 )
 
 func main() {
-	sessionActive := false
+	sessionActive = false
 
 	addr := os.Getenv("SERVER_ADDR")
 	if addr == "" {
@@ -147,9 +147,8 @@ func main() {
 	go readMsgs(dec) // thread para ler as msgs do servidor
 
 	reader := bufio.NewReader(os.Stdin) // leitura teclado
-
+	clearScreen()
 	for {
-		clearScreen()
 		fmt.Println("\n==============================")
 		fmt.Println(" 🎮 Alucinari - Menu Principal ")
 		fmt.Println("==============================")
@@ -167,26 +166,34 @@ func main() {
 
 		switch line {
 		case "1":
-			if !sessionActive {
+			if sessionActive {
+				prompt(reader, "Você já está conectado...")
+				time.Sleep(2 * time.Second)
+			} else {
 				username := prompt(reader, "Nome de usuário: ")
 				pass := prompt(reader, "Senha: ")
-
 				send(register, map[string]string{"username": username, "password": pass})
 			}
-			prompt(reader, "Você já está conectado...")
-			time.Sleep(2 * time.Second)
 		case "2":
-			username := prompt(reader, "Login: ")
-			pass := prompt(reader, "Senha: ")
+			if sessionActive {
+				fmt.Println("Você já está logado!")
+				time.Sleep(2 * time.Second)
+			} else {
+				username := prompt(reader, "Login: ")
+				pass := prompt(reader, "Senha: ")
+				send("login", map[string]string{"username": username, "password": pass})
+				time.Sleep(2 * time.Second)
+			}
+			clearScreen()
 
-			send("login", map[string]string{"username": username, "password": pass})
 		case "3":
 			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
 				time.Sleep(2 * time.Second)
 				continue
 			}
-			send(buypack, map[string]string{"id": sessionID})
+			send(buypack, map[string]string{"UID": sessionID})
+			time.Sleep(1 * time.Second)
 		case "4":
 			if !sessionActive {
 				fmt.Println("Precisa estar logado.")
@@ -240,30 +247,39 @@ func readMsgs(dec *json.Decoder) {
 		switch msg.Request {
 		case registered:
 			var temp struct {
-				UID      int
+				UID      string `json:"UID"`
 				Username string `json:"username"`
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
-			fmt.Printf("✅ Criado jogador #%d (%s)\n", temp.UID, temp.Username)
+			fmt.Printf("✅ Criado jogador #%s (%s)\n", temp.UID, temp.Username)
 			fmt.Printf("Você ganhou 4 boosters gratuitos! Eles já estão em seu inventário")
+			sessionID = temp.UID
 			sessionActive = true
 			name = temp.Username
 		case loggedin:
 			var temp struct {
-				UID      int
+				UID      string `json:"UID"`
 				Username string `json:"username"`
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
 			fmt.Printf("🔓 Login ok! Bem-vindo, %s.\n", temp.Username)
+			sessionID = temp.UID
 			sessionActive = true
 			name = temp.Username
 		case packbought:
 			var booster []Card
-			_ = json.Unmarshal(msg.Data, &booster)
+			_ = json.Unmarshal(msg.Data, &booster) // coloca array de cartas em variável no client
+
+			// trata concorreência no inventário
+			invMu.Lock()
 			inventory = append(inventory, booster...)
+			invMu.Unlock()
+
 			fmt.Printf("🎁 Novo booster adquirido! Veja em seu inventário\n")
+			time.Sleep(2 * time.Second)
 		case enqueued:
 			fmt.Printf("⏳ Entrou na fila. Aguardando oponente...")
+			time.Sleep(2 * time.Second)
 		case gamestart:
 			var temp struct {
 				Opponent string `json:"opponent"`
@@ -321,7 +337,7 @@ func readMsgs(dec *json.Decoder) {
 			gameResult = "tie"
 		case "erro":
 			var temp struct {
-				Error error `json:"error"`
+				Error string `json:"error"`
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
 			fmt.Printf("%s", temp.Error)
@@ -354,8 +370,8 @@ func printInventory() {
 	}
 	fmt.Println("\n📦 Inventário:")
 	for _, c := range inventory {
-		fmt.Printf("%2d) %-16s [%s %d]\n", c.CID, c.Name, strings.ToUpper(string(c.CardType)), c.Points)
-		fmt.Printf("♦ Raridade: %s\n")
+		fmt.Printf("%s) %-16s [%s %d]\n", c.CID, c.Name, strings.ToUpper(string(c.CardType)), c.Points)
+		fmt.Printf("♦ Raridade: %s\n", c.CardRarity)
 		fmt.Printf("✨ Efeito: %s\n", c.CardEffect)
 		fmt.Printf("%s\n", c.Desc)
 
