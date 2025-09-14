@@ -370,11 +370,21 @@ func printInventory() {
 	}
 	fmt.Println("\n📦 Inventário:")
 	for _, c := range inventory {
-		fmt.Printf("%s) %-16s [%s %d]\n", c.CID, c.Name, strings.ToUpper(string(c.CardType)), c.Points)
-		fmt.Printf("♦ Raridade: %s\n", c.CardRarity)
-		fmt.Printf("✨ Efeito: %s\n", c.CardEffect)
-		fmt.Printf("%s\n", c.Desc)
-
+		fmt.Printf("%s) %s\n", c.CID, strings.Title(c.Name))
+		fmt.Printf("   Tipo:      %s\n", strings.Title(string(c.CardType)))
+		if c.Points == 0 {
+			fmt.Printf("   Pontos:    %d\n", c.Points)
+		} else {
+			if c.CardType == Pill {
+				fmt.Printf("   Pontos:    +%d\n", c.Points)
+			} else {
+				fmt.Printf("   Pontos:    -%d\n", c.Points)
+			}
+		}
+		fmt.Printf("   Raridade:  %s\n", strings.Title(string(c.CardRarity)))
+		fmt.Printf("   Efeito:    %s\n", strings.Title(string(c.CardEffect)))
+		fmt.Printf("   Descrição: %s\n", strings.Title(c.Desc))
+		fmt.Println(strings.Repeat("-", 40))
 	}
 }
 
