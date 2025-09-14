@@ -69,9 +69,16 @@ func handleRegister(request Message, encoder *json.Encoder) {
 	data, _ := json.Marshal(pr)
 	_ = encoder.Encode(Message{Request: registered, Data: data})
 
-	// Concede 2 boosters de 5 cartas ao logar
-	for i := 0; i < 2; i++ {
-		handleBuyBooster(request, encoder)
+	// nova request contendo o novo UID para os boosters
+	for i := 0; i < 4; i++ {
+		boosterRequest := Message{
+			Request: buypack,
+			UID:     player.UID,
+		}
+		boosterData, _ := json.Marshal(map[string]string{"UID": player.UID})
+		boosterRequest.Data = boosterData
+
+		handleBuyBooster(boosterRequest, encoder)
 	}
 }
 
