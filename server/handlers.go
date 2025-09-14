@@ -33,12 +33,6 @@ func connectionHandler(connection net.Conn) {
 			handleBuyBooster(request, encoder)
 		case battle:
 			handleEnqueue(request, encoder)
-		case usecard:
-			handleUseCard(request, encoder)
-		case giveup:
-			handleGiveUp(request, encoder)
-		case ping:
-			handlePing(encoder)
 		default:
 			return
 		}
@@ -171,10 +165,19 @@ func handleEnqueue(request Message, encoder *json.Encoder) {
 	_ = encoder.Encode(Message{Request: "enqueue_response", Data: b})
 }
 
-func handlePing(encoder *json.Encoder) {
-	return
-}
+func sendError(encoder *json.Encoder, erro error) {
+	type payload struct {
+		Error error `json:"error"`
+	}
 
-func sendError(*json.Encoder, error) {
-	return
+	pld := payload{
+		Error: erro,
+	}
+
+	// uma mensagem contendo erro
+	msg := Message{Request: "erro"}
+
+	data, _ := json.Marshal(pld)
+	msg.Data = data
+	_ = encoder.Encode(msg)
 }
