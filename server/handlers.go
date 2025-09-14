@@ -93,7 +93,7 @@ func handleLogin(request Message, encoder *json.Encoder, connection net.Conn) {
 	loginMu.Lock()
 	if _, ok := pm.activeByUID[r.Login]; ok {
 		loginMu.Unlock()
-		sendError(encoder, errors.New("user already logged"))
+		sendError(encoder, errors.New("usuário já logado"))
 		return
 	}
 	loginMu.Unlock()
@@ -122,6 +122,11 @@ func handleBuyBooster(request Message, encoder *json.Encoder) {
 	}
 
 	p, error := pm.GetByUID(temp.UID)
+
+	if error != nil {
+		sendError(encoder, error)
+		return
+	}
 
 	var booster Booster
 
@@ -164,14 +169,6 @@ func handleEnqueue(request Message, encoder *json.Encoder) {
 	}
 	b, _ := json.Marshal(map[string]string{"Player enqueued": p.Username})
 	_ = encoder.Encode(Message{Request: "enqueue_response", Data: b})
-}
-
-func handleUseCard(request Message, encoder *json.Encoder) {
-	return
-}
-
-func handleGiveUp(request Message, encoder *json.Encoder) {
-	return
 }
 
 func handlePing(encoder *json.Encoder) {

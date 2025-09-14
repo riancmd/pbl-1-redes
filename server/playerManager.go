@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -20,11 +21,11 @@ func (pm *PlayerManager) CreatePlayer(username, password string) (*User, error) 
 	defer pm.mu.Unlock()
 
 	if _, exists := pm.byUsername[username]; exists {
-		return nil, errors.New("Usuário já existe.")
+		return nil, errors.New("usuário já existe")
 	}
 	pm.nextID++
 	p := &User{
-		UID:       string(pm.nextID),
+		UID:       strconv.Itoa(pm.nextID),
 		Username:  username,
 		Password:  password,
 		Deck:      make([]*Card, 0),
@@ -43,10 +44,10 @@ func (pm *PlayerManager) Login(login, password string, conn net.Conn) (*User, er
 	defer pm.mu.Unlock()
 	p, ok := pm.byUsername[login]
 	if !ok {
-		return nil, errors.New("Usuário não encontrado")
+		return nil, errors.New("usuário não encontrado")
 	}
 	if p.Password != password {
-		return nil, errors.New("Senha inválida")
+		return nil, errors.New("senha inválida")
 	}
 	p.Connection = conn
 	pm.activeByUID[p.Username] = p
@@ -59,7 +60,7 @@ func (pm *PlayerManager) GetByUID(uid string) (*User, error) {
 	defer pm.mu.Unlock()
 	p, ok := pm.byUID[uid]
 	if !ok {
-		return nil, errors.New("Usuário não encontrado")
+		return nil, errors.New("usuário não encontrado")
 	}
 	return p, nil
 }
@@ -70,7 +71,7 @@ func (pm *PlayerManager) AddToDeck(uid string, cards []*Card) error {
 	defer pm.mu.Unlock()
 	p, ok := pm.byUID[uid]
 	if !ok {
-		return errors.New("Usuário não encontrado")
+		return errors.New("usuário não encontrado")
 	}
 	p.Deck = append(p.Deck, cards...)
 	return nil

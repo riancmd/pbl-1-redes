@@ -307,28 +307,27 @@ func (m *Match) processTurn(enc1, enc2 *json.Encoder) {
 	// notifica que é o turno deste jogador
 	m.notifyTurnStart(enc1, enc2, currentPlayer.UID)
 
+	in := <-m.inbox // canal entre goroutines
+
 	// aguarda ação do jogador (usecard ou giveup)
 	for {
-		select {
-		case in := <-m.inbox:
-			// ignora se não é o jogador da vez
-			if in.PlayerUID != currentPlayer.UID {
-				continue
-			}
-
-			switch in.Action {
-			case "usecard":
-				if m.handleUseCard(enc1, enc2, in) {
-					return // acabou turno
-				}
-			case "giveup":
-				m.handleGiveUp(enc1, enc2, in)
-				return
-			}
-			/*case <-time.After(15 * time.Second): // timeout se demorar mais q 15s
-			m.handleTurnTimeout(enc1, enc2, currentPlayer.UID)
-			return*/
+		// ignora se não é o jogador da vez
+		if in.PlayerUID != currentPlayer.UID {
+			continue
 		}
+
+		switch in.Action {
+		case "usecard":
+			if m.handleUseCard(enc1, enc2, in) {
+				return // acabou turno
+			}
+		case "giveup":
+			m.handleGiveUp(enc1, enc2, in)
+			return
+		}
+		/*case <-time.After(15 * time.Second): // timeout se demorar mais q 15s
+		m.handleTurnTimeout(enc1, enc2, currentPlayer.UID)
+		return*/
 	}
 }
 

@@ -34,7 +34,11 @@ func main() {
 		panic(error)
 	}
 
+	// cria o gerenciador de usuários
 	pm = NewPlayerManager()
+
+	// começa goroutine para pareamento
+	go mm.matchmakingLoop()
 
 	address := ":8080"          //porta usada
 	envVar := os.Getenv("PORT") // usa env para pode trocar a porta qndo preciso
