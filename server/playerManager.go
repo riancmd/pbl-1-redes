@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -39,10 +40,10 @@ func (pm *PlayerManager) CreatePlayer(username, password string) (*User, error) 
 }
 
 // faz login
-func (pm *PlayerManager) Login(login, password string, conn net.Conn) (*User, error) {
+func (pm *PlayerManager) Login(username, password string, conn net.Conn) (*User, error) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	p, ok := pm.byUsername[login]
+	p, ok := pm.byUsername[username]
 	if !ok {
 		return nil, errors.New("usuário não encontrado")
 	}
@@ -50,7 +51,7 @@ func (pm *PlayerManager) Login(login, password string, conn net.Conn) (*User, er
 		return nil, errors.New("senha inválida")
 	}
 	p.Connection = conn
-	pm.activeByUID[p.Username] = p
+	pm.activeByUID[p.UID] = p
 	return p, nil
 }
 
@@ -81,4 +82,17 @@ func (pm *PlayerManager) Logout(user *User) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 	delete(pm.activeByUID, user.UID)
+
+	fmt.Printf("DEBUG: Tentando deslogar usuário %s (UID: %s)\n", user.Username, user.UID)
+
+	// garante que usuário seja completamente desconectado
+	if _, exists := pm.activeByUID[user.UID]; exists {
+		delete(pm.activeByUID, user.UID)
+		fmt.Printf("DEBUG: Usuário %s removido com sucesso\n", user.Username)
+	} else {
+		fmt.Printf("DEBUG: Usuário %s não estava na lista de ativos\n", user.Username)
+	}
+
+	user.IsInBattle = false
+	user.Connection = nil
 }

@@ -60,6 +60,9 @@ func main() {
 
 	fmt.Println("Servidor do Alucinari ouvindo na porta", address)
 
+	// cria listener UDP para pings na porta 8081
+	go handlerPing()
+
 	// cria loop para as conexões novas
 	for {
 		connection, error := listener.Accept() // aceita nova conexão
@@ -69,7 +72,6 @@ func main() {
 		}
 
 		go connectionHandler(connection)
-		go handlerPing()
 	}
 }
 

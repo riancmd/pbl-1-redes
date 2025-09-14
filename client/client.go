@@ -181,7 +181,7 @@ func main() {
 			} else {
 				username := prompt(reader, "Login: ")
 				pass := prompt(reader, "Senha: ")
-				send("login", map[string]string{"username": username, "password": pass})
+				send(login, map[string]string{"username": username, "password": pass})
 				time.Sleep(2 * time.Second)
 			}
 			clearScreen()
@@ -207,7 +207,7 @@ func main() {
 				time.Sleep(2 * time.Second)
 				continue
 			}
-			send("battle", map[string]string{"id": sessionID})
+			send(battle, map[string]string{"UID": sessionID})
 		case "6":
 			testLatency()
 		case "0":

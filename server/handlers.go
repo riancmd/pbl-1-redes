@@ -8,8 +8,17 @@ import (
 )
 
 func connectionHandler(connection net.Conn) {
-	defer connection.Close() // vai rodar assim que a função terminar
-	// USAR LOGOUT
+	// guarda usuário da conexão
+	var currentUser *User
+
+	defer func() {
+		if currentUser != nil {
+			fmt.Printf("DEBUG: Chamando logout para %s\n", currentUser.Username)
+			pm.Logout(currentUser)
+		}
+		connection.Close()
+		fmt.Printf("DEBUG: Conexão fechada\n")
+	}()
 
 	// encoders e decoders para as mensagens
 	decoder := json.NewDecoder(connection)
@@ -20,15 +29,24 @@ func connectionHandler(connection net.Conn) {
 		var request Message // cria a variavel p request
 
 		if error := decoder.Decode(&request); error != nil {
-			fmt.Printf("Erro ao decodificar mensagem: %v\n", error)
+			// cliente desconectou - limpo os dados
+			if currentUser != nil {
+				pm.Logout(currentUser)
+				fmt.Printf("Usuário %s deslogado automaticamente\n", currentUser.Username)
+			}
 			return
 		}
 
 		switch request.Request {
 		case register:
-			handleRegister(request, encoder)
+			if user := handleRegister(request, encoder); user != nil {
+				currentUser = user
+			}
 		case login:
-			handleLogin(request, encoder, connection)
+			// aqui, guardo também o usuário da conexão
+			if user := handleLogin(request, encoder, connection); user != nil {
+				currentUser = user
+			}
 		case buypack:
 			handleBuyBooster(request, encoder)
 		case battle:
@@ -41,7 +59,7 @@ func connectionHandler(connection net.Conn) {
 }
 
 // lida com o registro
-func handleRegister(request Message, encoder *json.Encoder) {
+func handleRegister(request Message, encoder *json.Encoder) *User {
 	registerMu.Lock()
 	defer registerMu.Unlock()
 	// crio var temp para guardar as infos
@@ -53,7 +71,7 @@ func handleRegister(request Message, encoder *json.Encoder) {
 	// desserializo dados em temp
 	if err := json.Unmarshal(request.Data, &temp); err != nil {
 		sendError(encoder, err)
-		return
+		return nil
 	}
 
 	// crio o usuário
@@ -61,7 +79,7 @@ func handleRegister(request Message, encoder *json.Encoder) {
 
 	if error != nil {
 		sendError(encoder, error)
-		return
+		return nil
 	}
 
 	// serializo mensagem e envio pro client
@@ -80,41 +98,60 @@ func handleRegister(request Message, encoder *json.Encoder) {
 
 		handleBuyBooster(boosterRequest, encoder)
 	}
+
+	return player
 }
 
 // lida com o login
-func handleLogin(request Message, encoder *json.Encoder, connection net.Conn) {
-	var r struct{ Login, Password string }
+func handleLogin(request Message, encoder *json.Encoder, connection net.Conn) *User {
+	var r struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
 	if err := json.Unmarshal(request.Data, &r); err != nil {
 		sendError(encoder, err)
-		return
+		return nil
 	}
 
-	// evita múltiplos logins do mesmo usuário
+	// trata concorrência
 	loginMu.Lock()
-	p, exists := pm.byUsername[r.Login]
+	defer loginMu.Unlock()
+
+	// evita múltiplos logins do mesmo usuário
+	p, exists := pm.byUsername[r.Username]
 
 	if !exists {
 		sendError(encoder, errors.New("usuário não encontrado"))
-		return
+		return nil
 	}
+
+	// DEBUG: Verifique o estado do activeByUID
+	fmt.Printf("DEBUG: Verificando login para UID %s\n", p.UID)
+	pm.mu.Lock()
+	if activeUser, ok := pm.activeByUID[p.UID]; ok {
+		pm.mu.Unlock()
+		fmt.Printf("DEBUG: Usuário %s (UID: %s) já está ativo\n", activeUser.Username, p.UID)
+		sendError(encoder, errors.New("usuário já logado"))
+		return nil
+	}
+	pm.mu.Unlock() // termina debug
 
 	if _, ok := pm.activeByUID[p.UID]; ok {
 		sendError(encoder, errors.New("usuário já logado"))
-		return
+		return nil
 	}
 
-	loginMu.Unlock()
-
-	p, err := pm.Login(r.Login, r.Password, connection)
+	p, err := pm.Login(r.Username, r.Password, connection)
 	if err != nil {
 		sendError(encoder, err)
-		return
+		return nil
 	}
 
 	resp := PlayerResponse{UID: p.UID, Username: p.Username}
 	b, _ := json.Marshal(resp)
 	_ = encoder.Encode(Message{Request: loggedin, Data: b})
+
+	return p
 
 }
 
@@ -179,8 +216,7 @@ func handleEnqueue(request Message, encoder *json.Encoder) {
 		sendError(encoder, error)
 		return
 	}
-	b, _ := json.Marshal(map[string]string{"Player enqueued": p.Username})
-	_ = encoder.Encode(Message{Request: "enqueue_response", Data: b})
+	_ = encoder.Encode(Message{Request: enqueued, Data: nil})
 }
 
 func sendError(encoder *json.Encoder, erro error) {
