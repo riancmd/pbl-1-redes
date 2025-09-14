@@ -25,11 +25,18 @@ func (mm *MatchManager) Enqueue(p *User) error {
 	mm.mu.Lock()
 	defer mm.mu.Unlock()
 
+	if p.Connection != nil {
+		fmt.Printf("Conexão não nula de %s", p.Username)
+	} else {
+		fmt.Printf("Conexão nula de %s", p.Username)
+	}
+
 	// verifica se já está em jogo
 	if p.IsInBattle {
 		return errors.New("player já está em jogo")
+	} else {
+		fmt.Printf("DEBUG: %s não está em jogo", p.Username) // debug
 	}
-
 	// evita-se duplicata na fila
 	for _, q := range mm.queue {
 		if q.UID == p.UID {
@@ -44,9 +51,11 @@ func (mm *MatchManager) Enqueue(p *User) error {
 // tira usuário da fila
 func (mm *MatchManager) dequeue() (*User, error) {
 	if len(mm.queue) == 0 {
+		fmt.Printf("DEBUG: Fila vazia")
 		return nil, errors.New("fila vazia")
 	}
 	p := mm.queue[0]
+	fmt.Printf("DEBUG: Removeu %s da fila", p.Username)
 	mm.queue = mm.queue[1:]
 	return p, nil
 }
@@ -66,6 +75,23 @@ func (mm *MatchManager) matchmakingLoop() {
 		if len(mm.queue) >= 2 {
 			p1, _ := mm.dequeue()
 			p2, _ := mm.dequeue()
+
+			// valido as conexões
+			if p1.Connection == nil || p2.Connection == nil {
+				fmt.Printf("DEBUG: Conexão de %s ou %s é inválida", p1.Username, p2.Username) // debug
+				// se a conexão for inválida, coloco de novo na fila
+				if p1.Connection != nil {
+					mm.queue = append([]*User{p1}, mm.queue...)
+					fmt.Printf("DEBUG: Conexão de %s é válida, de volta pra fila", p1.Username) // debug
+				}
+				if p2.Connection != nil {
+					mm.queue = append([]*User{p2}, mm.queue...)
+					fmt.Printf("DEBUG: Conexão de %s é válida, de volta pra fila", p2.Username) // debug
+				}
+				mm.mu.Unlock()
+				continue
+			}
+
 			mm.nextID++
 			match := &Match{
 				ID:    mm.nextID,
@@ -179,7 +205,9 @@ func (m *Match) sendGameStart(enc1, enc2 *json.Encoder) {
 	msg1.Data = data1
 	msg2.Data = data2
 	_ = enc1.Encode(msg1)
+	fmt.Printf("DEBUG: Enviada mensagem para player1") // debug
 	_ = enc2.Encode(msg2)
+	fmt.Printf("DEBUG: Enviada mensagem para player2") // debug
 }
 
 func (m *Match) checkGameEnd() bool {

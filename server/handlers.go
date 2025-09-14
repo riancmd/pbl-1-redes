@@ -39,7 +39,7 @@ func connectionHandler(connection net.Conn) {
 
 		switch request.Request {
 		case register:
-			if user := handleRegister(request, encoder); user != nil {
+			if user := handleRegister(request, encoder, connection); user != nil {
 				currentUser = user
 			}
 		case login:
@@ -59,7 +59,7 @@ func connectionHandler(connection net.Conn) {
 }
 
 // lida com o registro
-func handleRegister(request Message, encoder *json.Encoder) *User {
+func handleRegister(request Message, encoder *json.Encoder, connection net.Conn) *User {
 	registerMu.Lock()
 	defer registerMu.Unlock()
 	// crio var temp para guardar as infos
@@ -75,7 +75,7 @@ func handleRegister(request Message, encoder *json.Encoder) *User {
 	}
 
 	// crio o usuário
-	player, error := pm.CreatePlayer(temp.Username, temp.Password)
+	player, error := pm.CreatePlayer(temp.Username, temp.Password, connection)
 
 	if error != nil {
 		sendError(encoder, error)
@@ -212,6 +212,16 @@ func handleEnqueue(request Message, encoder *json.Encoder) {
 		sendError(encoder, error)
 		return
 	}
+
+	if p != nil {
+		fmt.Printf("DEBUG: Ao buscar por %s no PlayerManager, ele existe\n", p.Username)
+		if p.Connection != nil {
+			fmt.Printf("DEBUG: Ao buscar pela conexão de %s no PlayerManager, ela existez\n", p.Username)
+		} else {
+			fmt.Printf("DEBUG: Ao buscar pela conexão de %s no PlayerManager, ela não existe\n", p.Username)
+		}
+	}
+
 	if error := mm.Enqueue(p); error != nil {
 		sendError(encoder, error)
 		return

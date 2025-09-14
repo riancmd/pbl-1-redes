@@ -17,7 +17,7 @@ func NewPlayerManager() *PlayerManager {
 }
 
 // cria novo usuário
-func (pm *PlayerManager) CreatePlayer(username, password string) (*User, error) {
+func (pm *PlayerManager) CreatePlayer(username, password string, connection net.Conn) (*User, error) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
@@ -26,12 +26,13 @@ func (pm *PlayerManager) CreatePlayer(username, password string) (*User, error) 
 	}
 	pm.nextID++
 	p := &User{
-		UID:       strconv.Itoa(pm.nextID),
-		Username:  username,
-		Password:  password,
-		Deck:      make([]*Card, 0),
-		CreatedAt: time.Now(),
-		LastLogin: time.Now(),
+		UID:        strconv.Itoa(pm.nextID),
+		Username:   username,
+		Password:   password,
+		Deck:       make([]*Card, 0),
+		CreatedAt:  time.Now(),
+		LastLogin:  time.Now(),
+		Connection: connection,
 	}
 	pm.byUID[p.UID] = p
 	pm.byUsername[p.Username] = p
