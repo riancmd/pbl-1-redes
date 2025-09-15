@@ -51,6 +51,10 @@ func connectionHandler(connection net.Conn) {
 			handleBuyBooster(request, encoder)
 		case battle:
 			handleEnqueue(request, encoder)
+		case usecard:
+			handleUseCardAction(request, encoder)
+		case giveup:
+			handleGiveUpAction(request, encoder)
 		default:
 			return
 		}
@@ -244,4 +248,56 @@ func sendError(encoder *json.Encoder, erro error) {
 	data, _ := json.Marshal(pld)
 	msg.Data = data
 	_ = encoder.Encode(msg)
+}
+
+// lida com ação de usar carta, enviando pro inbox
+func handleUseCardAction(request Message, encoder *json.Encoder) {
+	// encontra a partida do jogador
+	match := mm.FindMatchByPlayerUID(request.UID)
+	if match == nil {
+		sendError(encoder, errors.New("jogador não está em partida"))
+		return
+	}
+
+	// cria mensagem para o canal da partida
+	msg := matchMsg{
+		PlayerUID: request.UID,
+		Action:    "usecard",
+		Data:      request.Data,
+	}
+
+	// envia para o canal da partida (non-blocking)
+	select {
+	case match.inbox <- msg:
+		// mensagem enviada com sucesso
+	default:
+		// canal cheio, ignora
+		fmt.Printf("DEBUG: Canal da partida cheio para jogador %s\n", request.UID)
+	}
+}
+
+// lida com ação de desistir, enviando pro inbox
+func handleGiveUpAction(request Message, encoder *json.Encoder) {
+	// encontra a partida do jogador
+	match := mm.FindMatchByPlayerUID(request.UID)
+	if match == nil {
+		sendError(encoder, errors.New("jogador não está em partida"))
+		return
+	}
+
+	// cria mensagem para o canal da partida
+	msg := matchMsg{
+		PlayerUID: request.UID,
+		Action:    "giveup",
+		Data:      request.Data,
+	}
+
+	// envia para o canal da partida (non-blocking)
+	select {
+	case match.inbox <- msg:
+		// mensagem enviada com sucesso
+	default:
+		// canal cheio, ignora
+		fmt.Printf("DEBUG: Canal da partida cheio para jogador %s\n", request.UID)
+	}
 }

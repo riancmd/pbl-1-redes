@@ -120,7 +120,9 @@ var (
 	IsInBattle bool
 	gameResult string
 
-	enc *json.Encoder
+	enc    *json.Encoder
+	reader *bufio.Reader // reader global agora
+
 )
 
 func main() {
@@ -146,83 +148,14 @@ func main() {
 
 	go readMsgs(dec) // thread para ler as msgs do servidor
 
-	reader := bufio.NewReader(os.Stdin) // leitura teclado
+	reader = bufio.NewReader(os.Stdin) // leitura teclado
 	clearScreen()
-	for {
-		fmt.Println("\n==============================")
-		fmt.Println(" 🎮 Alucinari - Menu Principal ")
-		fmt.Println("==============================")
-		fmt.Println("1 - Registrar")
-		fmt.Println("2 - Login")
-		fmt.Println("3 - Comprar pacotes")
-		fmt.Println("4 - Ver Inventário")
-		fmt.Println("5 - Batalhar")
-		fmt.Println("6 - Verificar ping")
-		fmt.Println("0 - Sair")
-		fmt.Print("> ")
 
-		line, _ := reader.ReadString('\n')
-		line = strings.TrimSpace(line)
-
-		switch line {
-		case "1":
-			if sessionActive {
-				prompt(reader, "Você já está conectado...")
-				time.Sleep(2 * time.Second)
-			} else {
-				username := prompt(reader, "Nome de usuário: ")
-				pass := prompt(reader, "Senha: ")
-				send(register, map[string]string{"username": username, "password": pass})
-			}
-		case "2":
-			if sessionActive {
-				fmt.Println("Você já está logado!")
-				time.Sleep(2 * time.Second)
-			} else {
-				username := prompt(reader, "Login: ")
-				pass := prompt(reader, "Senha: ")
-				send(login, map[string]string{"username": username, "password": pass})
-				time.Sleep(2 * time.Second)
-			}
-			clearScreen()
-
-		case "3":
-			if !sessionActive {
-				fmt.Println("Precisa estar logado.")
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			send(buypack, map[string]string{"UID": sessionID})
-			time.Sleep(1 * time.Second)
-		case "4":
-			if !sessionActive {
-				fmt.Println("Precisa estar logado.")
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			printInventory()
-		case "5":
-			if !sessionActive {
-				fmt.Println("Precisa estar logado.")
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			send(battle, map[string]string{"UID": sessionID})
-		case "6":
-			testLatency()
-		case "0":
-			fmt.Println("Bons sonhos... 🌙🌃💤")
-			return
-		default:
-			fmt.Println("Opção inválida")
-			time.Sleep(2 * time.Second)
-		}
-
-	}
+	mainMenu()
 }
 
 // printa e pega input
-func prompt(reader *bufio.Reader, label string) string {
+func prompt(label string) string {
 	fmt.Print(label)
 	line, _ := reader.ReadString('\n')
 	return strings.TrimSpace(line)
@@ -301,7 +234,7 @@ func readMsgs(dec *json.Decoder) {
 				time.Sleep(2 * time.Second)
 			}
 			IsInBattle = true
-			go battleOn() // roda batalha
+			battleOn() // roda batalha
 		case cardused:
 			println("Carta usada")
 			/*var temp struct {
@@ -463,8 +396,10 @@ func battleOn() {
 		// rodada caso esteja em batalha
 		clearScreen()
 		fmt.Printf("👁‍🗨 Alucinação...\n")
-		fmt.Printf("DEBUG: Vez de %s", turn)
-		fmt.Printf("DEBUG: sessionID é %s", turn)
+		fmt.Printf("DEBUG: Vez de %s\n", turn)
+		fmt.Printf("DEBUG: sessionID é %s\n", turn)
+		fmt.Printf("Sanidade: %d\n", sanity)
+		fmt.Printf("Estado: %s\n", string(dreamst))
 		if turn == sessionID {
 			fmt.Printf("Vez de %s\n", name)
 			fmt.Printf("\n🃏 Sua mão:")
@@ -473,7 +408,15 @@ func battleOn() {
 				fmt.Printf("%s\n", card.Desc)
 			}
 
-			s := prompt(reader, "Escolha uma carta (número): ")
+			s := prompt("Escolha uma carta (número): ")
+
+			// validação antes de converter
+			if s == "" {
+				fmt.Println("Entrada vazia, tente novamente.")
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
 			index, err := strconv.Atoi(s)
 			index -= 1
 
@@ -502,6 +445,9 @@ func battleOn() {
 			// envia a request para jogar a carta
 			data, _ := json.Marshal(map[string]any{"card": chosenCard})
 			_ = enc.Encode(Message{UID: sessionID, Request: usecard, Data: data})
+
+			// delay para garantir envio
+			time.Sleep(100 * time.Millisecond)
 		} else {
 			fmt.Println("⏳ Aguardando jogada do oponente...")
 		}
@@ -509,4 +455,87 @@ func battleOn() {
 		time.Sleep(500 * time.Millisecond)
 	}
 
+}
+
+// função separada para o menu
+func mainMenu() {
+	for {
+		// não mostra menu se em batalha
+		if IsInBattle {
+			for IsInBattle {
+				time.Sleep(100 * time.Millisecond)
+			}
+			clearScreen()
+		}
+
+		fmt.Println("\n==============================")
+		fmt.Println(" 🎮 Alucinari - Menu Principal ")
+		fmt.Println("==============================")
+		fmt.Println("1 - Registrar")
+		fmt.Println("2 - Login")
+		fmt.Println("3 - Comprar pacotes")
+		fmt.Println("4 - Ver Inventário")
+		fmt.Println("5 - Batalhar")
+		fmt.Println("6 - Verificar ping")
+		fmt.Println("0 - Sair")
+		fmt.Print("> ")
+
+		line, _ := reader.ReadString('\n')
+		line = strings.TrimSpace(line)
+
+		switch line {
+		case "1":
+			if sessionActive {
+				prompt("Você já está conectado...")
+				time.Sleep(2 * time.Second)
+			} else {
+				username := prompt("Nome de usuário: ")
+				pass := prompt("Senha: ")
+				send(register, map[string]string{"username": username, "password": pass})
+			}
+		case "2":
+			if sessionActive {
+				fmt.Println("Você já está logado!")
+				time.Sleep(2 * time.Second)
+			} else {
+				username := prompt("Login: ")
+				pass := prompt("Senha: ")
+				send(login, map[string]string{"username": username, "password": pass})
+				time.Sleep(2 * time.Second)
+			}
+			clearScreen()
+
+		case "3":
+			if !sessionActive {
+				fmt.Println("Precisa estar logado.")
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			send(buypack, map[string]string{"UID": sessionID})
+			time.Sleep(1 * time.Second)
+		case "4":
+			if !sessionActive {
+				fmt.Println("Precisa estar logado.")
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			printInventory()
+		case "5":
+			if !sessionActive {
+				fmt.Println("Precisa estar logado.")
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			send(battle, map[string]string{"UID": sessionID})
+		case "6":
+			testLatency()
+		case "0":
+			fmt.Println("Bons sonhos... 🌙🌃💤")
+			return
+		default:
+			fmt.Println("Opção inválida")
+			time.Sleep(2 * time.Second)
+		}
+
+	}
 }

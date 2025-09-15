@@ -365,7 +365,7 @@ func (m *Match) processTurn(enc1, enc2 *json.Encoder) {
 				m.handleGiveUp(enc1, enc2, in)
 				return
 			}
-		case <-time.After(15 * time.Second): // timeout se demorar mais q 15s
+		case <-time.After(30 * time.Second): // timeout se demorar mais q 15s
 			player, _ := pm.GetByUID(currentPlayer.UID)
 			m.notifyBoth(enc1, enc2, fmt.Sprintf("%s perdeu o turno por timeout", player.Username))
 			return
@@ -520,6 +520,12 @@ func (m *Match) sendUpdateInfo(enc1, enc2 *json.Encoder) {
 		DreamStates: m.DreamStates,
 		Round:       m.currentRound,
 	}
+
+	// debug
+	fmt.Printf("\nDEBUG: Sanidade de p1: %d\n", m.Sanity[m.P1.UID])
+	fmt.Printf("\nDEBUG: Sanidade de p2: %d\n", m.Sanity[m.P2.UID])
+	fmt.Printf("\nDEBUG: Dreamstate de p1: %s\n", string(m.DreamStates[m.P1.UID]))
+	fmt.Printf("\nDEBUG: Dreamstate de p2: %s\n", string(m.DreamStates[m.P1.UID]))
 
 	// uma mensagem pra cada usuário contendo o response e a mão
 	msg1 := Message{Request: updateinfo}
