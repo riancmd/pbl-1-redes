@@ -111,7 +111,7 @@ var (
 	inventory []Card
 
 	handMu sync.RWMutex
-	hand   []Card
+	hand   []*Card
 
 	sanity     int
 	dreamst    DreamState
@@ -252,8 +252,9 @@ func readMsgs(dec *json.Decoder) {
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
 			fmt.Printf("✅ Criado jogador #%s (%s)\n", temp.UID, temp.Username)
-			fmt.Printf("Você ganhou 4 boosters gratuitos! Eles já estão em seu inventário")
+			fmt.Printf("Você ganhou 4 boosters gratuitos! Eles já estão em seu inventário\n")
 			sessionID = temp.UID
+			fmt.Printf("DEBUG: %s é o seu UID e %s é o seu sessionID", temp.UID, sessionID)
 			sessionActive = true
 			name = temp.Username
 		case loggedin:
@@ -277,25 +278,29 @@ func readMsgs(dec *json.Decoder) {
 
 			fmt.Printf("🎁 Novo booster adquirido! Veja em seu inventário\n")
 			time.Sleep(2 * time.Second)
+			fmt.Printf("> ")
 		case enqueued:
 			fmt.Printf("⏳ Entrou na fila. Aguardando oponente...")
 			time.Sleep(2 * time.Second)
 		case gamestart:
 			var temp struct {
-				Opponent string `json:"opponent"`
-				Turn     string `json:"turn"`
-				Hand     []Card `json:"hand"`
+				Info        string                `json:"info"`
+				Turn        string                `json:"turn"`
+				Hand        []*Card               `json:"hand"`
+				Sanity      map[string]int        `json:"sanity"`
+				DreamStates map[string]DreamState `json:"dreamStates"`
 			}
 			_ = json.Unmarshal(msg.Data, &temp)
 			turn = temp.Turn
 			hand = temp.Hand
 			if turn == sessionID {
-				fmt.Printf("⚔️  Pareado com: %s. Você começa.\n", temp.Opponent)
+				fmt.Printf("⚔️  Pareado com: %s. Você começa.\n", temp.Info)
 				time.Sleep(2 * time.Second)
 			} else {
-				fmt.Printf("⚔️  Pareado com: %s. Seu oponente começa.\n", temp.Opponent)
+				fmt.Printf("⚔️  Pareado com: %s. Seu oponente começa.\n", temp.Info)
 				time.Sleep(2 * time.Second)
 			}
+			IsInBattle = true
 			go battleOn() // roda batalha
 		case cardused:
 			println("Carta usada")
@@ -452,9 +457,14 @@ func battleOn() {
 			return
 		}
 
+		// aguarda um pouco para garantir que as mensagens do servidor chegaram
+		time.Sleep(1000 * time.Millisecond)
+
 		// rodada caso esteja em batalha
 		clearScreen()
 		fmt.Printf("👁‍🗨 Alucinação...\n")
+		fmt.Printf("DEBUG: Vez de %s", turn)
+		fmt.Printf("DEBUG: sessionID é %s", turn)
 		if turn == sessionID {
 			fmt.Printf("Vez de %s\n", name)
 			fmt.Printf("\n🃏 Sua mão:")

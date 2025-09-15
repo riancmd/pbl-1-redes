@@ -319,10 +319,10 @@ func (m *Match) notifyBoth(enc1, enc2 *json.Encoder, message string) {
 // relevante para enviar a server response de newturn
 func (m *Match) notifyTurnStart(enc1, enc2 *json.Encoder, currentPlayerUID string) {
 	type turnPayload struct {
-		CurrentPlayer string `json:"currentPlayer"`
+		Turn string `json:"turn"`
 	}
 
-	payload := turnPayload{CurrentPlayer: currentPlayerUID}
+	payload := turnPayload{Turn: currentPlayerUID}
 	data, _ := json.Marshal(payload)
 
 	msg := Message{
@@ -347,27 +347,29 @@ func (m *Match) processTurn(enc1, enc2 *json.Encoder) {
 	// notifica que é o turno deste jogador
 	m.notifyTurnStart(enc1, enc2, currentPlayer.UID)
 
-	in := <-m.inbox // canal entre goroutines
-
 	// aguarda ação do jogador (usecard ou giveup)
 	for {
-		// ignora se não é o jogador da vez
-		if in.PlayerUID != currentPlayer.UID {
-			continue
-		}
-
-		switch in.Action {
-		case "usecard":
-			if m.handleUseCard(enc1, enc2, in) {
-				return // acabou turno
+		select {
+		case in := <-m.inbox: // canal entre goroutines
+			// ignora se não é o jogador da vez
+			if in.PlayerUID != currentPlayer.UID {
+				continue
 			}
-		case "giveup":
-			m.handleGiveUp(enc1, enc2, in)
+
+			switch in.Action {
+			case "usecard":
+				if m.handleUseCard(enc1, enc2, in) {
+					return // acabou turno
+				}
+			case "giveup":
+				m.handleGiveUp(enc1, enc2, in)
+				return
+			}
+		case <-time.After(15 * time.Second): // timeout se demorar mais q 15s
+			player, _ := pm.GetByUID(currentPlayer.UID)
+			m.notifyBoth(enc1, enc2, fmt.Sprintf("%s perdeu o turno por timeout", player.Username))
 			return
 		}
-		/*case <-time.After(15 * time.Second): // timeout se demorar mais q 15s
-		m.handleTurnTimeout(enc1, enc2, currentPlayer.UID)
-		return*/
 	}
 }
 
