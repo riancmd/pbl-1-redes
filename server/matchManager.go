@@ -422,25 +422,31 @@ func (m *Match) removeFromHand(playerUID string, card *Card) bool {
 }
 
 // aplica o efeito das cartas
-func (m *Match) applyCardEffect(playerUID string, card *Card) {
-	oldSanity := m.Sanity[playerUID]
+func (m *Match) applyCardEffect(playerUID string, card *Card, opponentUID string) {
+	// Determina o UID do alvo da carta
+	var targetUID string
+	if card.CardType == Pill {
+		targetUID = playerUID
+	} else {
+		targetUID = opponentUID
+	}
+
+	oldSanity := m.Sanity[targetUID]
 
 	switch card.CardType {
-	case "pill":
-		m.Sanity[playerUID] += card.Points
-	case "nrem":
-		m.Sanity[playerUID] -= card.Points
-	case "rem":
-		m.Sanity[playerUID] -= card.Points
+	case Pill:
+		m.Sanity[targetUID] += card.Points
+	case NREM, REM:
+		m.Sanity[targetUID] -= card.Points
 	}
 
 	// garante que sanidade não fique negativa
-	if m.Sanity[playerUID] < 0 {
-		m.Sanity[playerUID] = 0
+	if m.Sanity[targetUID] < 0 {
+		m.Sanity[targetUID] = 0
 	}
 
 	fmt.Printf("DEBUG: Efeito da carta aplicado - Jogador %s: %d -> %d\n",
-		playerUID, oldSanity, m.Sanity[playerUID])
+		targetUID, oldSanity, m.Sanity[targetUID])
 }
 
 // gerencia o uso das cartas
@@ -461,8 +467,32 @@ func (m *Match) handleUseCard(enc1, enc2 *json.Encoder, in matchMsg) bool {
 		return false
 	}
 
-	// aplica os efeitos da carta
-	m.applyCardEffect(in.PlayerUID, &req.Card)
+	// determina o UID do oponente
+	var opponentUID string
+	if m.P1.UID == in.PlayerUID {
+		opponentUID = m.P2.UID
+	} else {
+		opponentUID = m.P1.UID
+	}
+
+	// aplica os efeitos de sanidade da carta
+	m.applyCardEffect(in.PlayerUID, &req.Card, opponentUID)
+
+	// aplica os efeitos de estado da carta
+	switch req.Card.CardEffect {
+	case CONS:
+		m.DreamStates[in.PlayerUID] = conscious
+		m.RoundsInState[in.PlayerUID] = 0
+	case AD:
+		m.DreamStates[opponentUID] = sleepy
+		m.RoundsInState[opponentUID] = 0
+	case PAR:
+		m.DreamStates[opponentUID] = paralyzed
+		m.RoundsInState[opponentUID] = 0
+	case AS:
+		m.DreamStates[opponentUID] = scared
+		m.RoundsInState[opponentUID] = 0
+	}
 
 	// notifica jogada
 	player, _ := pm.GetByUID(in.PlayerUID)
@@ -505,7 +535,7 @@ func (m *Match) updateGameState(enc1, enc2 *json.Encoder) {
 		case conscious:
 			m.Sanity[playerUID] += 1
 			m.RoundsInState[playerUID]++
-			if m.RoundsInState[playerUID] >= 1 {
+			if m.RoundsInState[playerUID] >= 2 {
 				m.DreamStates[playerUID] = sleepy
 				m.RoundsInState[playerUID] = 0
 			}

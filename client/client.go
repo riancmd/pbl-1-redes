@@ -187,8 +187,9 @@ func showMenu() {
 			fmt.Println("3. Comprar booster")
 			fmt.Println("4. Ver inventário")
 			fmt.Println("5. Batalhar")
+			fmt.Println("6. Ping")
 		}
-		fmt.Println("6. Sair")
+		fmt.Println("7. Sair")
 		fmt.Print("Escolha uma opção: ")
 
 		input, _ := reader.ReadString('\n')
@@ -216,7 +217,9 @@ func showMenu() {
 				handleEnqueue()
 			}
 		case "6":
-			fmt.Println("Até mais!")
+			testLatency()
+		case "7":
+			fmt.Println("💤 Bons sonhos...")
 			return
 		default:
 			fmt.Println("Opção inválida.")
@@ -529,6 +532,7 @@ func printInventory() {
 		fmt.Printf(" Descrição: %s\n", strings.Title(c.Desc))
 		fmt.Println(strings.Repeat("-", 40))
 	}
+
 }
 
 func printHand() {
@@ -541,7 +545,7 @@ func printHand() {
 	}
 	fmt.Println(strings.Repeat("=", 40))
 	for i, c := range hand {
-		fmt.Printf("%d) %s (Tipo: %s, Pontos: %d)\n", i+1, c.Name, c.CardType, c.Points)
+		fmt.Printf("%d) %s (Tipo: %s, Pontos: %d, Efeito: %s)\n", i+1, c.Name, c.CardType, c.Points, c.CardEffect)
 	}
 	fmt.Println(strings.Repeat("=", 40))
 }
@@ -581,6 +585,7 @@ func testLatency() {
 	if string(buffer[:n]) == "pong" {
 		elapsed := time.Since(start).Milliseconds()
 		fmt.Printf("🏓 latência: %d ms\n", elapsed)
+		time.Sleep(2 * time.Second)
 	} else {
 		fmt.Printf("❌ resposta inválida: %s\n", string(buffer[:n]))
 	}

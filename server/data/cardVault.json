@@ -3,7 +3,7 @@
     "P1_rem_01": {
       "name": "acordando a bruxa",
       "CID": "P1_rem_01",
-      "desc": "",
+      "desc": "Um terrível julgamento o aguarda.",
       "cardtype": "rem",
       "cardrarity": "incomum",
       "cardeffect": "assustado",
@@ -12,7 +12,7 @@
     "P1_nrem_01": {
       "name": "admoestação parental",
       "CID": "P1_nrem_01",
-      "desc": "",
+      "desc": "Uma triste memória de infância.",
       "cardtype": "nrem",
       "cardrarity": "comum",
       "cardeffect": "nenhum",
@@ -21,7 +21,7 @@
     "P1_rem_02": {
       "name": "aparição sufocante",
       "CID": "P1_rem_02",
-      "desc": "",
+      "desc": "Escondida nos sombrios véus da noite.",
       "cardtype": "rem",
       "cardrarity": "comum",
       "cardeffect": "assustado",
@@ -30,7 +30,7 @@
     "P1_pill_01": {
       "name": "barbitúricos",
       "CID": "P1_pill_01",
-      "desc": "",
+      "desc": "Te fazem dormir.",
       "cardtype": "pill",
       "cardrarity": "incomum",
       "cardeffect": "adormecido",
@@ -39,7 +39,7 @@
     "P1_nrem_02": {
       "name": "bicho papão",
       "CID": "P1_nrem_02",
-      "desc": "",
+      "desc": "Como quando criança... Debaixo de cama ele está.",
       "cardtype": "nrem",
       "cardrarity": "incomum",
       "cardeffect": "nenhum",
@@ -48,7 +48,7 @@
     "P1_rem_03": {
       "name": "consciente necrópsia",
       "CID": "P1_rem_03",
-      "desc": "",
+      "desc": "Sobre sua pele, agora dança um gelado bisturi.",
       "cardtype": "rem",
       "cardrarity": "comum",
       "cardeffect": "assustado",
@@ -57,7 +57,7 @@
     "P1_nrem_03": {
       "name": "derretimento neural",
       "CID": "P1_nrem_03",
-      "desc": "",
+      "desc": "Lão se vão seus neurônios.",
       "cardtype": "nrem",
       "cardrarity": "comum",
       "cardeffect": "nenhum",
@@ -66,7 +66,7 @@
     "P1_rem_04": {
       "name": "desgraça online",
       "CID": "P1_rem_04",
-      "desc": "",
+      "desc": "Desgraça online.",
       "cardtype": "rem",
       "cardrarity": "rara",
       "cardeffect": "assustado",
@@ -75,7 +75,7 @@
     "P1_rem_05": {
       "name": "drama encefálico",
       "CID": "P1_rem_05",
-      "desc": "",
+      "desc": "Logo passa.",
       "cardtype": "rem",
       "cardrarity": "comum",
       "cardeffect": "paralisado",
@@ -84,7 +84,7 @@
     "P1_nrem_04": {
       "name": "homem esguio",
       "CID": "P1_nrem_04",
-      "desc": "",
+      "desc": "No canto de sua parede, ele lhe espera.",
       "cardtype": "nrem",
       "cardrarity": "incomum",
       "cardeffect": "nenhum",
@@ -93,7 +93,7 @@
     "P1_pill_02": {
       "name": "inalação de café",
       "CID": "P1_pill_02",
-      "desc": "",
+      "desc": "Acordado como nunca.",
       "cardtype": "pill",
       "cardrarity": "comum",
       "cardeffect": "consciente",
@@ -102,7 +102,7 @@
     "P1_nrem_05": {
       "name": "inflação decapital",
       "CID": "P1_nrem_05",
-      "desc": "",
+      "desc": "De capital eu bem entendo.",
       "cardtype": "nrem",
       "cardrarity": "incomum",
       "cardeffect": "nenhum",
@@ -111,7 +111,7 @@
     "P1_pill_03": {
       "name": "insônia",
       "CID": "P1_pill_03",
-      "desc": "",
+      "desc": "Sorte que hoje não pegou no sono.",
       "cardtype": "pill",
       "cardrarity": "comum",
       "cardeffect": "consciente",
@@ -120,7 +120,7 @@
     "P1_nrem_06": {
       "name": "malevolência",
       "CID": "P1_nrem_06",
-      "desc": "",
+      "desc": "Necessitas ter.",
       "cardtype": "nrem",
       "cardrarity": "incomum",
       "cardeffect": "nenhum",
@@ -129,7 +129,7 @@
     "P1_nrem_07": {
       "name": "martelada vertebral",
       "CID": "P1_nrem_07",
-      "desc": "",
+      "desc": "Te faz vibrar todo o corpo.",
       "cardtype": "nrem",
       "cardrarity": "comum",
       "cardeffect": "nenhum",
@@ -138,7 +138,7 @@
     "P1_rem_06": {
       "name": "memória materna",
       "CID": "P1_rem_06",
-      "desc": "",
+      "desc": "Uma doce memória pode mexer com qualquer um.",
       "cardtype": "rem",
       "cardrarity": "comum",
       "cardeffect": "paralisado",
@@ -147,7 +147,7 @@
     "P1_nrem_08": {
       "name": "o grito",
       "CID": "P1_nrem_08",
-      "desc": "",
+      "desc": "Lhe aflinge.",
       "cardtype": "nrem",
       "cardrarity": "comum",
       "cardeffect": "nenhum",
@@ -156,7 +156,7 @@
     "P1_pill_04": {
       "name": "o lapso",
       "CID": "P1_pill_04",
-      "desc": "",
+      "desc": "Vê o mundo real?",
       "cardtype": "pill",
       "cardrarity": "incomum",
       "cardeffect": "consciente",
@@ -165,7 +165,7 @@
     "P1_nrem_09": {
       "name": "obituário",
       "CID": "P1_nrem_09",
-      "desc": "",
+      "desc": "É o seu nome nessa ficha.",
       "cardtype": "nrem",
       "cardrarity": "comum",
       "cardeffect": "nenhum",
@@ -174,7 +174,7 @@
     "P1_rem_07": {
       "name": "paralisitagem",
       "CID": "P1_rem_07",
-      "desc": "",
+      "desc": "Sob a sua pele, te hipnotiza, te paralisa, te parasita.",
       "cardtype": "rem",
       "cardrarity": "incomum",
       "cardeffect": "paralisado",
@@ -183,7 +183,7 @@
     "P1_nrem_10": {
       "name": "pisadeira",
       "CID": "P1_nrem_10",
-      "desc": "",
+      "desc": "É ela quem não te deixa dormir.",
       "cardtype": "nrem",
       "cardrarity": "rara",
       "cardeffect": "paralisado",
@@ -192,7 +192,7 @@
     "P1_pill_05": {
       "name": "rinite benzedrínica",
       "CID": "P1_pill_05",
-      "desc": "",
+      "desc": "Substância ativa.",
       "cardtype": "pill",
       "cardrarity": "rara",
       "cardeffect": "consciente",
@@ -201,7 +201,7 @@
     "P1_nrem_11": {
       "name": "ruído metálico",
       "CID": "P1_nrem_11",
-      "desc": "",
+      "desc": "Que range os tímpanos e lhe rasga os ouvidos.",
       "cardtype": "nrem",
       "cardrarity": "comum",
       "cardeffect": "nenhum",
@@ -210,7 +210,7 @@
     "P1_rem_08": {
       "name": "sonho profundo",
       "CID": "P1_rem_08",
-      "desc": "",
+      "desc": "Este lugar... Familiar.",
       "cardtype": "rem",
       "cardrarity": "comum",
       "cardeffect": "paralisado",
@@ -219,7 +219,7 @@
     "P1_nrem_12": {
       "name": "sonhos de infância",
       "CID": "P1_nrem_12",
-      "desc": "",
+      "desc": "Amargas memórias de uma vida longínqua.",
       "cardtype": "nrem",
       "cardrarity": "incomum",
       "cardeffect": "nenhum",
@@ -228,7 +228,7 @@
     "P1_rem_09": {
       "name": "sonolência cruel",
       "CID": "P1_rem_09",
-      "desc": "",
+      "desc": "Crua e cruel.",
       "cardtype": "rem",
       "cardrarity": "incomum",
       "cardeffect": "adormecido",
@@ -237,7 +237,7 @@
     "P1_nrem_13": {
       "name": "sopro da morte",
       "CID": "P1_nrem_13",
-      "desc": "",
+      "desc": "Gela-te os ossos.",
       "cardtype": "nrem",
       "cardrarity": "incomum",
       "cardeffect": "nenhum",
@@ -246,7 +246,7 @@
     "P1_nrem_14": {
       "name": "tarântula",
       "CID": "P1_nrem_14",
-      "desc": "",
+      "desc": "Com ou sem veneno?",
       "cardtype": "nrem",
       "cardrarity": "comum",
       "cardeffect": "nenhum",
@@ -255,7 +255,7 @@
     "P1_rem_10": {
       "name": "terrores noturnos",
       "CID": "P1_rem_10",
-      "desc": "",
+      "desc": "Que não te deixam dormir...",
       "cardtype": "rem",
       "cardrarity": "incomum",
       "cardeffect": "assustado",
@@ -264,7 +264,7 @@
     "P1_pill_06": {
       "name": "tropeço hipnagógico",
       "CID": "P1_pill_06",
-      "desc": "",
+      "desc": "Como tropeçar na calçada da rua. Acorde!",
       "cardtype": "pill",
       "cardrarity": "incomum",
       "cardeffect": "consciente",
