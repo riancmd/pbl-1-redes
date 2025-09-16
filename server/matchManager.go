@@ -25,18 +25,11 @@ func (mm *MatchManager) Enqueue(p *User) error {
 	mm.mu.Lock()
 	defer mm.mu.Unlock()
 
-	if p.Connection != nil {
-		fmt.Printf("Conexão não nula de %s", p.Username)
-	} else {
-		fmt.Printf("Conexão nula de %s", p.Username)
-	}
-
 	// verifica se já está em jogo
 	if p.IsInBattle {
 		return errors.New("player já está em jogo")
-	} else {
-		fmt.Printf("DEBUG: %s não está em jogo", p.Username) // debug
 	}
+
 	// evita-se duplicata na fila
 	for _, q := range mm.queue {
 		if q.UID == p.UID {
@@ -51,11 +44,9 @@ func (mm *MatchManager) Enqueue(p *User) error {
 // tira usuário da fila
 func (mm *MatchManager) dequeue() (*User, error) {
 	if len(mm.queue) == 0 {
-		fmt.Printf("DEBUG: Fila vazia")
 		return nil, errors.New("fila vazia")
 	}
 	p := mm.queue[0]
-	fmt.Printf("DEBUG: Removeu %s da fila", p.Username)
 	mm.queue = mm.queue[1:]
 	return p, nil
 }
@@ -78,15 +69,12 @@ func (mm *MatchManager) matchmakingLoop() {
 
 			// valido as conexões
 			if p1.Connection == nil || p2.Connection == nil {
-				fmt.Printf("DEBUG: Conexão de %s ou %s é inválida", p1.Username, p2.Username) // debug
 				// se a conexão for inválida, coloco de novo na fila
 				if p1.Connection != nil {
 					mm.queue = append([]*User{p1}, mm.queue...)
-					fmt.Printf("DEBUG: Conexão de %s é válida, de volta pra fila", p1.Username) // debug
 				}
 				if p2.Connection != nil {
 					mm.queue = append([]*User{p2}, mm.queue...)
-					fmt.Printf("DEBUG: Conexão de %s é válida, de volta pra fila", p2.Username) // debug
 				}
 				mm.mu.Unlock()
 				continue
@@ -100,10 +88,13 @@ func (mm *MatchManager) matchmakingLoop() {
 				State: Running,
 				Turn:  p1.UID, // p1 começa
 
-				Hand:        map[string][]*Card{},
-				Sanity:      map[string]int{p1.UID: 40, p2.UID: 40},
-				DreamStates: map[string]DreamState{p1.UID: sleepy, p2.UID: sleepy},
-				inbox:       make(chan matchMsg, 16),
+				Hand:             map[string][]*Card{},
+				Sanity:           map[string]int{p1.UID: 40, p2.UID: 40},
+				DreamStates:      map[string]DreamState{p1.UID: sleepy, p2.UID: sleepy},
+				RoundsInState:    map[string]int{p1.UID: 0, p2.UID: 0},
+				StateLockedUntil: map[string]int{p1.UID: 0, p2.UID: 0},
+				currentRound:     1,
+				inbox:            make(chan matchMsg, 16),
 			}
 			p1.IsInBattle, p2.IsInBattle = true, true
 			mm.matches[match.ID] = match
@@ -118,14 +109,22 @@ func (mm *MatchManager) matchmakingLoop() {
 
 // gerencia a batalha
 func (m *Match) run() {
+	defer func() {
+		// cleanup quando a partida termina
+		mm.mu.Lock()
+		delete(mm.matches, m.ID)
+		delete(mm.byPlayer, m.P1.UID)
+		delete(mm.byPlayer, m.P2.UID)
+		mm.mu.Unlock()
+
+		m.P1.IsInBattle = false
+		m.P2.IsInBattle = false
+		close(m.inbox)
+	}()
+
 	// cria codificadores para cada usuário
 	enc1 := json.NewEncoder(m.P1.Connection)
 	enc2 := json.NewEncoder(m.P2.Connection)
-
-	// são ajustados os estados de sonho de cada jogador
-	m.RoundsInState = map[string]int{m.P1.UID: 0, m.P2.UID: 0}
-	m.StateLockedUntil = map[string]int{m.P1.UID: 0, m.P2.UID: 0}
-	m.currentRound = 1
 
 	// são escolhidas 10 cartas aleatórias do inventário de cada jogador
 	m.Hand[m.P1.UID] = drawCards(m.P1.Deck)
@@ -133,30 +132,58 @@ func (m *Match) run() {
 
 	m.sendGameStart(enc1, enc2)
 
-	// loop do jogo
+	// pequena pausa para garantir que os clientes processaram o game start
+	time.Sleep(1 * time.Second)
 
-	for {
-		// aqui é verificado se as condições de fim foram atingidas
+	// loop do jogo
+	for m.State == Running {
+		fmt.Printf("=== TURNO %d - Jogador %s ===\n", m.currentRound, m.Turn)
+
+		// verifica condições de fim ANTES do turno
 		if m.checkGameEnd() {
-			m.endGame(enc1, enc2)
-			return
+			fmt.Printf("DEBUG: Jogo deve terminar - sanidades: P1=%d P2=%d\n", m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
+			break
 		}
 
-		// processa-se o turno do jogador atual
-		m.processTurn(enc1, enc2)
+		// envia informação de turno para AMBOS os jogadores
+		m.notifyTurnStart(enc1, enc2, m.Turn)
 
-		// atualiza as infos para cada jogador
-		m.updateInfo(enc1, enc2)
+		// pequena pausa para sincronização
+		time.Sleep(500 * time.Millisecond)
 
-		// troca turnos
+		// processa o turno
+		actionTaken := m.processTurn(enc1, enc2)
+
+		if !actionTaken {
+			fmt.Printf("DEBUG: Nenhuma ação foi tomada no turno\n")
+		}
+
+		// atualiza estados e sanidade
+		m.updateGameState(enc1, enc2)
+
+		// verifica condições de fim APÓS as atualizações
+		if m.checkGameEnd() {
+			fmt.Printf("DEBUG: Jogo terminando após atualizações\n")
+			break
+		}
+
+		// troca de turno
 		m.switchTurn()
 		m.currentRound++
+
+		// pequena pausa entre turnos
+		time.Sleep(1 * time.Second)
 	}
+
+	m.endGame(enc1, enc2)
 }
 
 // pega 10 cartas
 func drawCards(deck []*Card) []*Card {
-	// embaralha e pega até 10
+	if len(deck) == 0 {
+		return []*Card{}
+	}
+
 	hand := make([]*Card, len(deck))
 	copy(hand, deck)
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -168,7 +195,6 @@ func drawCards(deck []*Card) []*Card {
 }
 
 // manda response de início do game
-// o dado é enviado sobre a mão e início do jogo pra cada jogador
 func (m *Match) sendGameStart(enc1, enc2 *json.Encoder) {
 	type startPayload struct {
 		Info        string                `json:"info"`
@@ -196,7 +222,6 @@ func (m *Match) sendGameStart(enc1, enc2 *json.Encoder) {
 		DreamStates: m.DreamStates,
 	}
 
-	// uma mensagem pra cada usuário contendo o response e a mão
 	msg1 := Message{Request: gamestart}
 	msg2 := Message{Request: gamestart}
 
@@ -204,10 +229,11 @@ func (m *Match) sendGameStart(enc1, enc2 *json.Encoder) {
 	data2, _ := json.Marshal(p2Payload)
 	msg1.Data = data1
 	msg2.Data = data2
+
 	_ = enc1.Encode(msg1)
-	fmt.Printf("DEBUG: Enviada mensagem para player1") // debug
 	_ = enc2.Encode(msg2)
-	fmt.Printf("DEBUG: Enviada mensagem para player2") // debug
+
+	fmt.Printf("DEBUG: Game start enviado para ambos jogadores\n")
 }
 
 func (m *Match) checkGameEnd() bool {
@@ -218,7 +244,7 @@ func (m *Match) checkGameEnd() bool {
 		}
 	}
 
-	// Verificar se acabaram as cartas
+	// Verificar se acabaram as cartas para ambos
 	if len(m.Hand[m.P1.UID]) == 0 && len(m.Hand[m.P2.UID]) == 0 {
 		return true
 	}
@@ -227,13 +253,16 @@ func (m *Match) checkGameEnd() bool {
 }
 
 func (m *Match) endGame(enc1, enc2 *json.Encoder) {
-	// determina qual o vencedor
-	var response1 string
-	var response2 string
+	fmt.Printf("DEBUG: Finalizando jogo - P1: %d sanidade, P2: %d sanidade\n",
+		m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
+
+	m.State = Finished
+
+	// determina o resultado
+	var response1, response2 string
 	p1Sanity := m.Sanity[m.P1.UID]
 	p2Sanity := m.Sanity[m.P2.UID]
 
-	// quem zerou a sanidade perde
 	if p1Sanity <= 0 && p2Sanity <= 0 {
 		response1 = newtie
 		response2 = newtie
@@ -244,7 +273,7 @@ func (m *Match) endGame(enc1, enc2 *json.Encoder) {
 		response1 = newvictory
 		response2 = newloss
 	} else {
-		// quem tiver maior sanidade vence, se acabaram as cartas
+		// acabaram as cartas - maior sanidade vence
 		if p1Sanity > p2Sanity {
 			response1 = newvictory
 			response2 = newloss
@@ -261,25 +290,16 @@ func (m *Match) endGame(enc1, enc2 *json.Encoder) {
 		Tag string `json:"Tag"`
 	}
 
-	payload := gameEndPayload{
-		Tag: "none",
-	}
+	payload := gameEndPayload{Tag: "none"}
+	data, _ := json.Marshal(payload)
 
-	// uma mensagem pra cada usuário contendo o resultado
-	msg1 := Message{Request: response1}
-	msg2 := Message{Request: response2}
+	msg1 := Message{Request: response1, Data: data}
+	msg2 := Message{Request: response2, Data: data}
 
-	data1, _ := json.Marshal(payload)
-	data2, _ := json.Marshal(payload)
-	msg1.Data = data1
-	msg2.Data = data2
 	_ = enc1.Encode(msg1)
 	_ = enc2.Encode(msg2)
 
-	// limpando o estado da partida
-	m.State = Finished
-	m.P1.IsInBattle = false
-	m.P2.IsInBattle = false
+	fmt.Printf("DEBUG: Mensagens de fim enviadas: %s para P1, %s para P2\n", response1, response2)
 }
 
 func (m *Match) getCurrentPlayer() *User {
@@ -294,6 +314,76 @@ func (m *Match) switchTurn() {
 		m.Turn = m.P2.UID
 	} else {
 		m.Turn = m.P1.UID
+	}
+	fmt.Printf("DEBUG: Turno trocado para jogador %s\n", m.Turn)
+}
+
+// notifica início do turno pros jogadores
+func (m *Match) notifyTurnStart(enc1, enc2 *json.Encoder, currentPlayerUID string) {
+	type turnPayload struct {
+		Turn string `json:"turn"`
+	}
+
+	payload := turnPayload{Turn: currentPlayerUID}
+	data, _ := json.Marshal(payload)
+
+	msg := Message{
+		Request: newturn,
+		Data:    data,
+	}
+
+	_ = enc1.Encode(msg)
+	_ = enc2.Encode(msg)
+
+	fmt.Printf("DEBUG: Notificação de turno enviada - turno de: %s\n", currentPlayerUID)
+	time.Sleep(100 * time.Millisecond) // espera um pouco para garantir que a mensagem chegou ao cliente
+}
+
+// processa o turno e retorna se uma ação foi tomada
+func (m *Match) processTurn(enc1, enc2 *json.Encoder) bool {
+	currentPlayer := m.getCurrentPlayer()
+
+	// verifica se o jogador está paralisado
+	if m.DreamStates[currentPlayer.UID] == paralyzed {
+		m.notifyBoth(enc1, enc2, fmt.Sprintf("%s está paralisado e perde o turno", currentPlayer.Username))
+		time.Sleep(2 * time.Second)
+		return false
+	}
+
+	fmt.Printf("DEBUG: Aguardando ação do jogador %s\n", currentPlayer.UID)
+
+	// timeout de 30 segundos
+	timeout := time.After(30 * time.Second)
+
+	for {
+		select {
+		case msg := <-m.inbox:
+			fmt.Printf("DEBUG: Mensagem recebida no inbox: %s de %s\n", msg.Action, msg.PlayerUID)
+
+			// ignora se não é o jogador da vez
+			if msg.PlayerUID != currentPlayer.UID {
+				fmt.Printf("DEBUG: Mensagem ignorada - não é turno de %s (turno atual: %s)\n",
+					msg.PlayerUID, currentPlayer.UID)
+				continue
+			}
+
+			switch msg.Action {
+			case "usecard":
+				fmt.Printf("DEBUG: Processando usecard\n")
+				if m.handleUseCard(enc1, enc2, msg) {
+					return true
+				}
+			case "giveup":
+				fmt.Printf("DEBUG: Processando giveup\n")
+				m.handleGiveUp(enc1, enc2, msg)
+				return true
+			}
+
+		case <-timeout:
+			fmt.Printf("DEBUG: Timeout - jogador %s perdeu o turno\n", currentPlayer.UID)
+			m.notifyBoth(enc1, enc2, fmt.Sprintf("%s perdeu o turno por timeout", currentPlayer.Username))
+			return false
+		}
 	}
 }
 
@@ -315,91 +405,42 @@ func (m *Match) notifyBoth(enc1, enc2 *json.Encoder, message string) {
 	_ = enc2.Encode(msg)
 }
 
-// notifica início do turno pros jogadores
-// relevante para enviar a server response de newturn
-func (m *Match) notifyTurnStart(enc1, enc2 *json.Encoder, currentPlayerUID string) {
-	type turnPayload struct {
-		Turn string `json:"turn"`
-	}
-
-	payload := turnPayload{Turn: currentPlayerUID}
-	data, _ := json.Marshal(payload)
-
-	msg := Message{
-		Request: newturn,
-		Data:    data,
-	}
-
-	_ = enc1.Encode(msg)
-	_ = enc2.Encode(msg)
-}
-
-func (m *Match) processTurn(enc1, enc2 *json.Encoder) {
-	currentPlayer := m.getCurrentPlayer()
-
-	// verifica se o jogador está paralisado
-	// manda notificação caso esteja
-	if m.DreamStates[currentPlayer.UID] == paralyzed {
-		m.notifyBoth(enc1, enc2, fmt.Sprintf("%s está paralisado e perde o turno", currentPlayer.Username))
-		return
-	}
-
-	// notifica que é o turno deste jogador
-	m.notifyTurnStart(enc1, enc2, currentPlayer.UID)
-
-	// aguarda ação do jogador (usecard ou giveup)
-	for {
-		select {
-		case in := <-m.inbox: // canal entre goroutines
-			// ignora se não é o jogador da vez
-			if in.PlayerUID != currentPlayer.UID {
-				continue
-			}
-
-			switch in.Action {
-			case "usecard":
-				if m.handleUseCard(enc1, enc2, in) {
-					return // acabou turno
-				}
-			case "giveup":
-				m.handleGiveUp(enc1, enc2, in)
-				return
-			}
-		case <-time.After(30 * time.Second): // timeout se demorar mais q 15s
-			player, _ := pm.GetByUID(currentPlayer.UID)
-			m.notifyBoth(enc1, enc2, fmt.Sprintf("%s perdeu o turno por timeout", player.Username))
-			return
-		}
-	}
-}
-
 // remove carta da mão
 func (m *Match) removeFromHand(playerUID string, card *Card) bool {
-	hand := m.Hand[playerUID] // mão do player
+	hand := m.Hand[playerUID]
 
 	for i, handCard := range hand {
 		if handCard.CID == card.CID {
-			// remove carta da mão
 			m.Hand[playerUID] = append(hand[:i], hand[i+1:]...)
+			fmt.Printf("DEBUG: Carta %s removida da mão de %s\n", card.Name, playerUID)
 			return true
 		}
 	}
 
-	return false // caso a carta  seja encontrada
+	fmt.Printf("DEBUG: Carta %s não encontrada na mão de %s\n", card.Name, playerUID)
+	return false
 }
 
 // aplica o efeito das cartas
 func (m *Match) applyCardEffect(playerUID string, card *Card) {
+	oldSanity := m.Sanity[playerUID]
+
 	switch card.CardType {
 	case "pill":
 		m.Sanity[playerUID] += card.Points
-
 	case "nrem":
 		m.Sanity[playerUID] -= card.Points
-
 	case "rem":
 		m.Sanity[playerUID] -= card.Points
 	}
+
+	// garante que sanidade não fique negativa
+	if m.Sanity[playerUID] < 0 {
+		m.Sanity[playerUID] = 0
+	}
+
+	fmt.Printf("DEBUG: Efeito da carta aplicado - Jogador %s: %d -> %d\n",
+		playerUID, oldSanity, m.Sanity[playerUID])
 }
 
 // gerencia o uso das cartas
@@ -409,30 +450,32 @@ func (m *Match) handleUseCard(enc1, enc2 *json.Encoder, in matchMsg) bool {
 	}
 	var req cardReq
 	if err := json.Unmarshal(in.Data, &req); err != nil {
+		fmt.Printf("DEBUG: Erro ao deserializar carta: %v\n", err)
 		return false
 	}
+
+	fmt.Printf("DEBUG: Processando carta %s do jogador %s\n", req.Card.Name, in.PlayerUID)
 
 	// remove a carta da mão
 	if !m.removeFromHand(in.PlayerUID, &req.Card) {
 		return false
 	}
 
-	// agora, aplica os efeitos da carta
+	// aplica os efeitos da carta
 	m.applyCardEffect(in.PlayerUID, &req.Card)
 
-	// notificar que jogador usou carta
+	// notifica jogada
 	player, _ := pm.GetByUID(in.PlayerUID)
-	playerName := player.Username
-	m.notifyBoth(enc1, enc2, fmt.Sprintf("%s jogou %s", playerName, req.Card.Name))
+	m.notifyBoth(enc1, enc2, fmt.Sprintf("%s jogou %s", player.Username, req.Card.Name))
 
-	return true // turno finalizado
+	return true
 }
 
 // gerencia desistência
 func (m *Match) handleGiveUp(enc1, enc2 *json.Encoder, in matchMsg) {
-	// determinar qual encoder corresponde a cada jogador
-	var playerEnc, opponentEnc *json.Encoder
+	m.State = Finished
 
+	var playerEnc, opponentEnc *json.Encoder
 	if in.PlayerUID == m.P1.UID {
 		playerEnc = enc1
 		opponentEnc = enc2
@@ -441,71 +484,60 @@ func (m *Match) handleGiveUp(enc1, enc2 *json.Encoder, in matchMsg) {
 		opponentEnc = enc1
 	}
 
-	// enviar derrota para quem desistiu
-	lossMsg := Message{Request: "newLoss", Data: nil}
+	lossMsg := Message{Request: newloss, Data: nil}
+	victoryMsg := Message{Request: newvictory, Data: nil}
+
 	_ = playerEnc.Encode(lossMsg)
-
-	// enviar vitória para o oponente
-	victoryMsg := Message{Request: "newVictory", Data: nil}
 	_ = opponentEnc.Encode(victoryMsg)
-
-	// finalizar partida
-	m.State = Finished
-	m.P1.IsInBattle = false
-	m.P2.IsInBattle = false
 }
 
-// fase de atualizar informações pros jogadores
-// atualiza os estados, sanidade, etc.
-func (m *Match) updateInfo(enc1, enc2 *json.Encoder) {
-	// aplica os efeitos dos estados de sonho
+// atualiza estado do jogo (sanidade, estados de sonho)
+func (m *Match) updateGameState(enc1, enc2 *json.Encoder) {
+	fmt.Printf("DEBUG: Atualizando estado do jogo - Round %d\n", m.currentRound)
+
+	// aplica efeitos dos estados de sonho
 	for playerUID, state := range m.DreamStates {
+		oldSanity := m.Sanity[playerUID]
+
 		switch state {
 		case sleepy:
 			m.Sanity[playerUID] -= 3
-			// esse estado pode ser alterado na próxima rodada
-
 		case conscious:
 			m.Sanity[playerUID] += 1
 			m.RoundsInState[playerUID]++
-			// depois de uma rodada, volta para sleepy
 			if m.RoundsInState[playerUID] >= 1 {
 				m.DreamStates[playerUID] = sleepy
 				m.RoundsInState[playerUID] = 0
 			}
-
 		case paralyzed:
-			// +0 sanidade, já tratado no processTurn
 			m.RoundsInState[playerUID]++
-			// depois de uma rodada, volta para sleepy
 			if m.RoundsInState[playerUID] >= 1 {
 				m.DreamStates[playerUID] = sleepy
 				m.RoundsInState[playerUID] = 0
 			}
-
 		case scared:
 			m.Sanity[playerUID] -= 4
 			m.RoundsInState[playerUID]++
-			// dura duas rodadas
 			if m.RoundsInState[playerUID] >= 2 {
 				m.DreamStates[playerUID] = sleepy
 				m.RoundsInState[playerUID] = 0
 			}
 		}
-	}
 
-	// verifica se sanidade ficou negativa
-	for playerUID, sanity := range m.Sanity {
-		if sanity < 0 {
+		// garante sanidade não-negativa
+		if m.Sanity[playerUID] < 0 {
 			m.Sanity[playerUID] = 0
 		}
+
+		fmt.Printf("DEBUG: Estado %s aplicado ao jogador %s: %d -> %d\n",
+			string(state), playerUID, oldSanity, m.Sanity[playerUID])
 	}
 
-	// enviar update para ambos os jogadores
+	// envia informações atualizadas
 	m.sendUpdateInfo(enc1, enc2)
 }
 
-// atualiza informações da partida para ambos os jogadores
+// envia informações atualizadas para os clientes
 func (m *Match) sendUpdateInfo(enc1, enc2 *json.Encoder) {
 	type updatePayload struct {
 		Turn        string                `json:"turn"`
@@ -521,20 +553,12 @@ func (m *Match) sendUpdateInfo(enc1, enc2 *json.Encoder) {
 		Round:       m.currentRound,
 	}
 
-	// debug
-	fmt.Printf("\nDEBUG: Sanidade de p1: %d\n", m.Sanity[m.P1.UID])
-	fmt.Printf("\nDEBUG: Sanidade de p2: %d\n", m.Sanity[m.P2.UID])
-	fmt.Printf("\nDEBUG: Dreamstate de p1: %s\n", string(m.DreamStates[m.P1.UID]))
-	fmt.Printf("\nDEBUG: Dreamstate de p2: %s\n", string(m.DreamStates[m.P1.UID]))
+	data, _ := json.Marshal(payload)
+	msg := Message{Request: updateinfo, Data: data}
 
-	// uma mensagem pra cada usuário contendo o response e a mão
-	msg1 := Message{Request: updateinfo}
-	msg2 := Message{Request: updateinfo}
+	_ = enc1.Encode(msg)
+	_ = enc2.Encode(msg)
 
-	data1, _ := json.Marshal(payload)
-	data2, _ := json.Marshal(payload)
-	msg1.Data = data1
-	msg2.Data = data2
-	_ = enc1.Encode(msg1)
-	_ = enc2.Encode(msg2)
+	fmt.Printf("DEBUG: Update enviado - P1 sanidade: %d, P2 sanidade: %d\n",
+		m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
 }

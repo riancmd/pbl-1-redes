@@ -218,26 +218,3 @@ const (
 	InProgress
 	Completed
 )
-
-type BattleArena struct {
-	BID         string // battle ID
-	Player1     *ActiveSession
-	Player2     *ActiveSession
-	Scoreboard  map[string]int
-	State       BattleState
-	battleMutex sync.Mutex
-}
-
-type BattleCommand struct {
-	SessionID string
-	Command   string
-	CardData  json.RawMessage
-}
-
-// gerenciador de batalhas
-type BattleCoordinator struct {
-	mutex         sync.RWMutex
-	waitingQueue  []*ActiveSession
-	activeBattles map[string]*BattleArena
-	nextBattleID  int
-}
