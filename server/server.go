@@ -43,6 +43,9 @@ func main() {
 	// começa goroutine para pareamento
 	go mm.matchmakingLoop()
 
+	// info logs
+	go logServerStats() // printa a cada 2 seg
+
 	address := ":8080"          //porta usada
 	envVar := os.Getenv("PORT") // usa env para pode trocar a porta qndo preciso
 

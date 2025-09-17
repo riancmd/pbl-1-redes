@@ -1,28 +1,28 @@
-version: '3.8'
+version: "3.8"
 
 services:
+  #serviço do server
   server:
     build:
-      context: .
-      dockerfile: Dockerfile.server
+      context: ./server
+    container_name: server
     ports:
-      - "8080:8080"
-      - "8081:8081"
+      - "8080:8080" # tcp pro jogo normal
+      - "8081:8081/udp" # a udp que é apenas pra latência
     networks:
-      - game-network
+      - go-net
 
-  tester:
+  # Serviço do Cliente 
+  client:
     build:
-      context: .
-      dockerfile: Dockerfile.tester
+      context: ./client
+    container_name: client
     depends_on:
       - server
     networks:
-      - game-network
-    # desativa o comando padrão para que você possa executá-lo manualmente, se quiser
-    # ou mude 'command' para ['go', 'test', ...], caso queira que ele rode automaticamente
-    command: ["tail", "-f", "/dev/null"] 
+      - go-net
+    stdin_open: true # nao tirar (input funfa)
+    tty: true      
     
 networks:
-  game-network:
-    driver: bridge
+  go-net:
