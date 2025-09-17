@@ -10,9 +10,10 @@ import (
 	"time"
 )
 
-// Definições de tipos e constantes, replicando o client.go para a comunicação.
-// Assim, o bot sabe como conversar com o servidor.
+// ALGUMAS CONSTANTES PRESENTES NO JOGO
+// EM NUMBOTS É O NÚMERO DE BOTS A RODAR NO SERVIDOR!!!
 const (
+	NUMBOTS    int    = 500
 	register   string = "register"
 	login      string = "login"
 	buypack    string = "buyNewPack"
@@ -128,9 +129,16 @@ func (b *BotClient) connect(addr string) error {
 // handleServerMessages escuta e processa as mensagens do servidor
 func (b *BotClient) handleServerMessages() {
 	for {
+		// Define um timeout de leitura para evitar que a goroutine trave indefinidamente
+		b.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		var msg Message
 		if err := b.dec.Decode(&msg); err != nil {
-			b.logError("Conexão perdida, encerrando...")
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				// Se for um timeout, o bot tenta a próxima ação
+				b.logError("Timeout ao receber mensagem, a conexão pode estar travada. Tentando prosseguir...")
+				return // Retorna para o loop principal do run()
+			}
+			b.logError("Conexão perdida, encerrando... Erro: %v", err)
 			b.conn.Close()
 			return
 		}
@@ -331,14 +339,23 @@ func (b *BotClient) run() {
 	// Escuta as mensagens do servidor em uma goroutine
 	go b.handleServerMessages()
 
-	// 1. Tenta registrar, vai q é a primeira vez
-	b.register()
-	time.Sleep(2 * time.Second)
+	// Loop para garantir o registro/login antes de prosseguir
+	maxAttempts := 5
+	for i := 0; i < maxAttempts && !b.loggedIn; i++ {
+		// 1. Tenta registrar
+		b.register()
+		//time.Sleep(1 * time.Second) // Dá um tempo para o servidor responder
 
-	// 2. Tenta fazer login, caso o registro falhe
+		// 2. Tenta fazer login, caso o registro falhe ou já exista
+		if !b.loggedIn {
+			b.login()
+			//time.Sleep(1 * time.Second) // Dá um tempo para o servidor responder
+		}
+	}
+
 	if !b.loggedIn {
-		b.login()
-		time.Sleep(2 * time.Second)
+		b.logError("Falha ao se registrar/logar após %d tentativas. Encerrando bot.", maxAttempts)
+		return
 	}
 
 	// 3. Compra uns boosters para ter carta no inventário
@@ -355,14 +372,12 @@ func (b *BotClient) run() {
 	for {
 		if !b.inBattle {
 			b.logInfo("Aguardando por uma nova partida ou final da atual...")
-			// Se o bot não estiver em batalha, espera um pouco para tentar de novo
 			time.Sleep(5 * time.Second)
 			if !b.inBattle {
-				b.enqueue() // Tenta entrar na fila de novo, caso tenha saído ou dado erro
+				b.enqueue()
 				time.Sleep(1 * time.Second)
 			}
 		} else {
-			// Espera o turno do bot
 			b.logInfo("Esperando nosso turno...")
 			<-b.turnSignal
 			if len(b.hand) > 0 {
@@ -371,7 +386,7 @@ func (b *BotClient) run() {
 				b.logInfo("Mão vazia, desistindo!")
 				b.giveUp()
 			}
-			time.Sleep(2 * time.Second) // Pra dar tempo do servidor processar
+			time.Sleep(2 * time.Second)
 		}
 	}
 }
@@ -381,7 +396,7 @@ func main() {
 	numBotsStr := os.Getenv("NUM_BOTS")
 	numBots, err := strconv.Atoi(numBotsStr)
 	if err != nil || numBots <= 0 {
-		numBots = 200 // quantos forem necessários
+		numBots = NUMBOTS // quantos forem necessários
 	}
 	fmt.Printf("Iniciando %d bots de teste...\n", numBots)
 
