@@ -234,6 +234,7 @@ func handleEnqueue(request Message, encoder *json.Encoder) {
 	_ = encoder.Encode(Message{Request: enqueued, Data: nil})
 }
 
+// função notifica erro
 func sendError(encoder *json.Encoder, erro error) {
 	type payload struct {
 		Error string `json:"error"`
@@ -251,7 +252,6 @@ func sendError(encoder *json.Encoder, erro error) {
 	_ = encoder.Encode(msg)
 }
 
-// lida com ação de usar carta, enviando pro inbox
 // lida com ação de usar carta, enviando pro inbox
 func handleUseCardAction(request Message, encoder *json.Encoder) {
 	//fmt.Printf("DEBUG: Recebida ação usecard do jogador %s\n", request.UID)
@@ -354,18 +354,18 @@ func logServerStats() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		// Pega as informações do PlayerManager
+		// pega as informações do PlayerManager
 		pm.mu.Lock()
 		registeredPlayers := len(pm.byUID)
 		onlinePlayers := len(pm.activeByUID)
 		pm.mu.Unlock()
 
-		// Pega as informações do MatchManager
+		// peega as informações do MatchManager
 		mm.mu.Lock()
 		activeMatches := len(mm.matches)
 		mm.mu.Unlock()
 
-		// Pega as informações do CardVault
+		// pega as informações do CardVault
 		boosterStock := len(vault.Vault)
 
 		fmt.Println("--- Estatísticas do Servidor ---")

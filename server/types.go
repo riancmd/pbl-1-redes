@@ -52,7 +52,6 @@ const (
 	newloss    string = "newLoss"
 	newvictory string = "newVictory"
 	newtie     string = "newTie"
-	pong       string = "pong"
 )
 
 // registro do usuário (dado persistente)
@@ -84,13 +83,6 @@ type ActiveSession struct {
 	Deck       []*Card
 	LastPing   time.Time
 	IsInBattle bool
-}
-
-// gerenciador de sessões ativas
-type SessionRegistry struct {
-	mutex    sync.RWMutex // mutex
-	sessions map[string]*ActiveSession
-	nextSID  int
 }
 
 // gerenciador de jogadores
