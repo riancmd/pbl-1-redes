@@ -12,12 +12,15 @@ import (
 const CARDS_PER_BOOSTER int = 5
 
 // inicializa as cartas do JSON no dicionário usando o cardDatabase
+// função MTO importante para tirar do arquivo cardsVault.json (base de dados das cartas) e trazer virtualizadas pro jogo
 func InitializeCardsFromJSON(filename string) (map[string]Card, error) {
 	file, error := os.ReadFile(filename)
 	if error != nil {
 		return nil, fmt.Errorf("erro ao ler arquivo: %v", error)
 	}
 
+	// base de dados de cartas, definido no types
+	// cardDB contém um map de CID e cartas
 	var cardDB CardDatabase
 	error = json.Unmarshal(file, &cardDB)
 	if error != nil {

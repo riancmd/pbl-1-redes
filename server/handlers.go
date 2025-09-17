@@ -14,11 +14,11 @@ func connectionHandler(connection net.Conn) {
 
 	defer func() {
 		if currentUser != nil {
-			fmt.Printf("DEBUG: Chamando logout para %s\n", currentUser.Username)
+			//fmt.Printf("DEBUG: Chamando logout para %s\n", currentUser.Username)
 			pm.Logout(currentUser)
 		}
 		connection.Close()
-		fmt.Printf("DEBUG: Conexão fechada\n")
+		//fmt.Printf("DEBUG: Conexão fechada\n")
 	}()
 
 	// encoders e decoders para as mensagens
@@ -131,7 +131,7 @@ func handleLogin(request Message, encoder *json.Encoder, connection net.Conn) *U
 	}
 
 	// DEBUG: Verifique o estado do activeByUID
-	fmt.Printf("DEBUG: Verificando login para UID %s\n", p.UID)
+	//fmt.Printf("DEBUG: Verificando login para UID %s\n", p.UID)
 	pm.mu.Lock()
 	if activeUser, ok := pm.activeByUID[p.UID]; ok {
 		pm.mu.Unlock()
@@ -217,15 +217,15 @@ func handleEnqueue(request Message, encoder *json.Encoder) {
 		sendError(encoder, error)
 		return
 	}
-
-	if p != nil {
-		fmt.Printf("DEBUG: Ao buscar por %s no PlayerManager, ele existe\n", p.Username)
-		if p.Connection != nil {
-			fmt.Printf("DEBUG: Ao buscar pela conexão de %s no PlayerManager, ela existez\n", p.Username)
-		} else {
-			fmt.Printf("DEBUG: Ao buscar pela conexão de %s no PlayerManager, ela não existe\n", p.Username)
-		}
-	}
+	/*
+		if p != nil {
+			fmt.Printf("DEBUG: Ao buscar por %s no PlayerManager, ele existe\n", p.Username)
+			if p.Connection != nil {
+				fmt.Printf("DEBUG: Ao buscar pela conexão de %s no PlayerManager, ela existez\n", p.Username)
+			} else {
+				fmt.Printf("DEBUG: Ao buscar pela conexão de %s no PlayerManager, ela não existe\n", p.Username)
+			}
+		}*/ // info dump
 
 	if error := mm.Enqueue(p); error != nil {
 		sendError(encoder, error)
@@ -234,6 +234,7 @@ func handleEnqueue(request Message, encoder *json.Encoder) {
 	_ = encoder.Encode(Message{Request: enqueued, Data: nil})
 }
 
+// função notifica erro
 func sendError(encoder *json.Encoder, erro error) {
 	type payload struct {
 		Error string `json:"error"`
@@ -252,20 +253,19 @@ func sendError(encoder *json.Encoder, erro error) {
 }
 
 // lida com ação de usar carta, enviando pro inbox
-// lida com ação de usar carta, enviando pro inbox
 func handleUseCardAction(request Message, encoder *json.Encoder) {
-	fmt.Printf("DEBUG: Recebida ação usecard do jogador %s\n", request.UID)
+	//fmt.Printf("DEBUG: Recebida ação usecard do jogador %s\n", request.UID)
 
 	// verifica se o jogador existe e está ativo
 	player, err := pm.GetByUID(request.UID)
 	if err != nil {
-		fmt.Printf("DEBUG: Jogador %s não encontrado\n", request.UID)
+		//fmt.Printf("DEBUG: Jogador %s não encontrado\n", request.UID)
 		sendError(encoder, err)
 		return
 	}
 
 	if !player.IsInBattle {
-		fmt.Printf("DEBUG: Jogador %s não está em batalha\n", request.UID)
+		//fmt.Printf("DEBUG: Jogador %s não está em batalha\n", request.UID)
 		sendError(encoder, errors.New("jogador não está em partida"))
 		return
 	}
@@ -273,13 +273,13 @@ func handleUseCardAction(request Message, encoder *json.Encoder) {
 	// encontra a partida do jogador
 	match := mm.FindMatchByPlayerUID(request.UID)
 	if match == nil {
-		fmt.Printf("DEBUG: Partida não encontrada para jogador %s\n", request.UID)
+		//fmt.Printf("DEBUG: Partida não encontrada para jogador %s\n", request.UID)
 		sendError(encoder, errors.New("jogador não está em partida"))
 		return
 	}
 
 	if match.State != Running {
-		fmt.Printf("DEBUG: Partida não está rodando para jogador %s\n", request.UID)
+		//fmt.Printf("DEBUG: Partida não está rodando para jogador %s\n", request.UID)
 		sendError(encoder, errors.New("partida não está ativa"))
 		return
 	}
@@ -291,32 +291,32 @@ func handleUseCardAction(request Message, encoder *json.Encoder) {
 		Data:      request.Data,
 	}
 
-	fmt.Printf("DEBUG: Tentando enviar mensagem usecard para inbox da partida %d\n", match.ID)
+	//fmt.Printf("DEBUG: Tentando enviar mensagem usecard para inbox da partida %d\n", match.ID)
 
 	// envia para o canal da partida com timeout
 	select {
 	case match.inbox <- msg:
-		fmt.Printf("DEBUG: Mensagem usecard enviada com sucesso\n")
+		//fmt.Printf("DEBUG: Mensagem usecard enviada com sucesso\n")
 	case <-time.After(1 * time.Second):
-		fmt.Printf("DEBUG: Timeout ao enviar mensagem para partida\n")
+		//fmt.Printf("DEBUG: Timeout ao enviar mensagem para partida\n")
 		sendError(encoder, errors.New("timeout ao processar ação"))
 	}
 }
 
 // lida com ação de desistir, enviando pro inbox
 func handleGiveUpAction(request Message, encoder *json.Encoder) {
-	fmt.Printf("DEBUG: Recebida ação giveup do jogador %s\n", request.UID)
+	//fmt.Printf("DEBUG: Recebida ação giveup do jogador %s\n", request.UID)
 
 	// verifica se o jogador existe e está ativo
 	player, err := pm.GetByUID(request.UID)
 	if err != nil {
-		fmt.Printf("DEBUG: Jogador %s não encontrado\n", request.UID)
+		//fmt.Printf("DEBUG: Jogador %s não encontrado\n", request.UID)
 		sendError(encoder, err)
 		return
 	}
 
 	if !player.IsInBattle {
-		fmt.Printf("DEBUG: Jogador %s não está em batalha\n", request.UID)
+		//fmt.Printf("DEBUG: Jogador %s não está em batalha\n", request.UID)
 		sendError(encoder, errors.New("jogador não está em partida"))
 		return
 	}
@@ -324,7 +324,7 @@ func handleGiveUpAction(request Message, encoder *json.Encoder) {
 	// encontra a partida do jogador
 	match := mm.FindMatchByPlayerUID(request.UID)
 	if match == nil {
-		fmt.Printf("DEBUG: Partida não encontrada para jogador %s\n", request.UID)
+		//fmt.Printf("DEBUG: Partida não encontrada para jogador %s\n", request.UID)
 		sendError(encoder, errors.New("jogador não está em partida"))
 		return
 	}
@@ -336,14 +336,43 @@ func handleGiveUpAction(request Message, encoder *json.Encoder) {
 		Data:      request.Data,
 	}
 
-	fmt.Printf("DEBUG: Tentando enviar mensagem giveup para inbox da partida %d\n", match.ID)
+	//fmt.Printf("DEBUG: Tentando enviar mensagem giveup para inbox da partida %d\n", match.ID)
 
 	// envia para o canal da partida com timeout
 	select {
 	case match.inbox <- msg:
-		fmt.Printf("DEBUG: Mensagem giveup enviada com sucesso\n")
+		//fmt.Printf("DEBUG: Mensagem giveup enviada com sucesso\n")
 	case <-time.After(1 * time.Second):
-		fmt.Printf("DEBUG: Timeout ao enviar mensagem para partida\n")
+		//fmt.Printf("DEBUG: Timeout ao enviar mensagem para partida\n")
 		sendError(encoder, errors.New("timeout ao processar ação"))
+	}
+}
+
+func logServerStats() {
+	// cria um ticker para logar as estatísticas a cada 10 segundos
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// pega as informações do PlayerManager
+		pm.mu.Lock()
+		registeredPlayers := len(pm.byUID)
+		onlinePlayers := len(pm.activeByUID)
+		pm.mu.Unlock()
+
+		// peega as informações do MatchManager
+		mm.mu.Lock()
+		activeMatches := len(mm.matches)
+		mm.mu.Unlock()
+
+		// pega as informações do CardVault
+		boosterStock := len(vault.Vault)
+
+		fmt.Println("--- Estatísticas do Servidor ---")
+		fmt.Printf("Jogadores inscritos: %d\n", registeredPlayers)
+		fmt.Printf("Jogadores online: %d\n", onlinePlayers)
+		fmt.Printf("Estoque de boosters: %d\n", boosterStock)
+		fmt.Printf("Partidas ativas: %d\n", activeMatches)
+		fmt.Println("--------------------------------")
 	}
 }

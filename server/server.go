@@ -43,6 +43,9 @@ func main() {
 	// começa goroutine para pareamento
 	go mm.matchmakingLoop()
 
+	// info logs
+	go logServerStats() // printa a cada 2 seg
+
 	address := ":8080"          //porta usada
 	envVar := os.Getenv("PORT") // usa env para pode trocar a porta qndo preciso
 
@@ -75,8 +78,10 @@ func main() {
 	}
 }
 
+// cria conexão udp com porta 8081 QUANDO solicitado pelo usuário (e nn automaticamente)
+// por isso ela fecha com o defer assim que acaba a função
 func handlerPing() {
-	address, _ := net.ResolveUDPAddr("udp", ":8081")
+	address, _ := net.ResolveUDPAddr("udp", ":8081") // cria conexão pela porta 8081
 	connection, _ := net.ListenUDP("udp", address)
 	defer connection.Close()
 
@@ -84,8 +89,8 @@ func handlerPing() {
 	for {
 		n, remote, _ := connection.ReadFromUDP(buffer)
 		msg := string(buffer[:n])
-		if msg == "ping" {
-			connection.WriteToUDP([]byte("pong"), remote)
+		if msg == "ping" { // verifica se recebeu ping
+			connection.WriteToUDP([]byte("pong"), remote) // manda PONG de volta
 		}
 	}
 }

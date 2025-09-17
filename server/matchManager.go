@@ -141,7 +141,7 @@ func (m *Match) run() {
 
 		// verifica condições de fim ANTES do turno
 		if m.checkGameEnd() {
-			fmt.Printf("DEBUG: Jogo deve terminar - sanidades: P1=%d P2=%d\n", m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
+			//fmt.Printf("DEBUG: Jogo deve terminar - sanidades: P1=%d P2=%d\n", m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
 			break
 		}
 
@@ -152,11 +152,11 @@ func (m *Match) run() {
 		time.Sleep(500 * time.Millisecond)
 
 		// processa o turno
-		actionTaken := m.processTurn(enc1, enc2)
+		//actionTaken := m.processTurn(enc1, enc2)
 
-		if !actionTaken {
-			fmt.Printf("DEBUG: Nenhuma ação foi tomada no turno\n")
-		}
+		//if !actionTaken {
+		//	fmt.Printf("DEBUG: Nenhuma ação foi tomada no turno\n")
+		//}
 
 		// atualiza estados e sanidade
 		m.updateGameState(enc1, enc2)
@@ -233,7 +233,7 @@ func (m *Match) sendGameStart(enc1, enc2 *json.Encoder) {
 	_ = enc1.Encode(msg1)
 	_ = enc2.Encode(msg2)
 
-	fmt.Printf("DEBUG: Game start enviado para ambos jogadores\n")
+	//fmt.Printf("DEBUG: Game start enviado para ambos jogadores\n")
 }
 
 func (m *Match) checkGameEnd() bool {
@@ -253,8 +253,8 @@ func (m *Match) checkGameEnd() bool {
 }
 
 func (m *Match) endGame(enc1, enc2 *json.Encoder) {
-	fmt.Printf("DEBUG: Finalizando jogo - P1: %d sanidade, P2: %d sanidade\n",
-		m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
+	//fmt.Printf("DEBUG: Finalizando jogo - P1: %d sanidade, P2: %d sanidade\n",
+	//	m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
 
 	m.State = Finished
 
@@ -299,7 +299,7 @@ func (m *Match) endGame(enc1, enc2 *json.Encoder) {
 	_ = enc1.Encode(msg1)
 	_ = enc2.Encode(msg2)
 
-	fmt.Printf("DEBUG: Mensagens de fim enviadas: %s para P1, %s para P2\n", response1, response2)
+	//fmt.Printf("DEBUG: Mensagens de fim enviadas: %s para P1, %s para P2\n", response1, response2)
 }
 
 func (m *Match) getCurrentPlayer() *User {
@@ -315,7 +315,7 @@ func (m *Match) switchTurn() {
 	} else {
 		m.Turn = m.P1.UID
 	}
-	fmt.Printf("DEBUG: Turno trocado para jogador %s\n", m.Turn)
+	//fmt.Printf("DEBUG: Turno trocado para jogador %s\n", m.Turn)
 }
 
 // notifica início do turno pros jogadores
@@ -335,7 +335,7 @@ func (m *Match) notifyTurnStart(enc1, enc2 *json.Encoder, currentPlayerUID strin
 	_ = enc1.Encode(msg)
 	_ = enc2.Encode(msg)
 
-	fmt.Printf("DEBUG: Notificação de turno enviada - turno de: %s\n", currentPlayerUID)
+	//fmt.Printf("DEBUG: Notificação de turno enviada - turno de: %s\n", currentPlayerUID)
 	time.Sleep(100 * time.Millisecond) // espera um pouco para garantir que a mensagem chegou ao cliente
 }
 
@@ -350,7 +350,7 @@ func (m *Match) processTurn(enc1, enc2 *json.Encoder) bool {
 		return false
 	}
 
-	fmt.Printf("DEBUG: Aguardando ação do jogador %s\n", currentPlayer.UID)
+	//fmt.Printf("DEBUG: Aguardando ação do jogador %s\n", currentPlayer.UID)
 
 	// timeout de 30 segundos
 	timeout := time.After(30 * time.Second)
@@ -358,29 +358,29 @@ func (m *Match) processTurn(enc1, enc2 *json.Encoder) bool {
 	for {
 		select {
 		case msg := <-m.inbox:
-			fmt.Printf("DEBUG: Mensagem recebida no inbox: %s de %s\n", msg.Action, msg.PlayerUID)
+			//fmt.Printf("DEBUG: Mensagem recebida no inbox: %s de %s\n", msg.Action, msg.PlayerUID)
 
 			// ignora se não é o jogador da vez
 			if msg.PlayerUID != currentPlayer.UID {
-				fmt.Printf("DEBUG: Mensagem ignorada - não é turno de %s (turno atual: %s)\n",
-					msg.PlayerUID, currentPlayer.UID)
+				//fmt.Printf("DEBUG: Mensagem ignorada - não é turno de %s (turno atual: %s)\n",
+				//	msg.PlayerUID, currentPlayer.UID)
 				continue
 			}
 
 			switch msg.Action {
 			case "usecard":
-				fmt.Printf("DEBUG: Processando usecard\n")
+				//fmt.Printf("DEBUG: Processando usecard\n")
 				if m.handleUseCard(enc1, enc2, msg) {
 					return true
 				}
 			case "giveup":
-				fmt.Printf("DEBUG: Processando giveup\n")
+				//fmt.Printf("DEBUG: Processando giveup\n")
 				m.handleGiveUp(enc1, enc2, msg)
 				return true
 			}
 
 		case <-timeout:
-			fmt.Printf("DEBUG: Timeout - jogador %s perdeu o turno\n", currentPlayer.UID)
+			//fmt.Printf("DEBUG: Timeout - jogador %s perdeu o turno\n", currentPlayer.UID)
 			m.notifyBoth(enc1, enc2, fmt.Sprintf("%s perdeu o turno por timeout", currentPlayer.Username))
 			return false
 		}
@@ -412,12 +412,12 @@ func (m *Match) removeFromHand(playerUID string, card *Card) bool {
 	for i, handCard := range hand {
 		if handCard.CID == card.CID {
 			m.Hand[playerUID] = append(hand[:i], hand[i+1:]...)
-			fmt.Printf("DEBUG: Carta %s removida da mão de %s\n", card.Name, playerUID)
+			//fmt.Printf("DEBUG: Carta %s removida da mão de %s\n", card.Name, playerUID)
 			return true
 		}
 	}
 
-	fmt.Printf("DEBUG: Carta %s não encontrada na mão de %s\n", card.Name, playerUID)
+	//fmt.Printf("DEBUG: Carta %s não encontrada na mão de %s\n", card.Name, playerUID)
 	return false
 }
 
@@ -431,7 +431,7 @@ func (m *Match) applyCardEffect(playerUID string, card *Card, opponentUID string
 		targetUID = opponentUID
 	}
 
-	oldSanity := m.Sanity[targetUID]
+	//oldSanity := m.Sanity[targetUID]
 
 	switch card.CardType {
 	case Pill:
@@ -445,8 +445,8 @@ func (m *Match) applyCardEffect(playerUID string, card *Card, opponentUID string
 		m.Sanity[targetUID] = 0
 	}
 
-	fmt.Printf("DEBUG: Efeito da carta aplicado - Jogador %s: %d -> %d\n",
-		targetUID, oldSanity, m.Sanity[targetUID])
+	//fmt.Printf("DEBUG: Efeito da carta aplicado - Jogador %s: %d -> %d\n",
+	//	targetUID, oldSanity, m.Sanity[targetUID])
 }
 
 // gerencia o uso das cartas
@@ -456,11 +456,11 @@ func (m *Match) handleUseCard(enc1, enc2 *json.Encoder, in matchMsg) bool {
 	}
 	var req cardReq
 	if err := json.Unmarshal(in.Data, &req); err != nil {
-		fmt.Printf("DEBUG: Erro ao deserializar carta: %v\n", err)
+		//fmt.Printf("DEBUG: Erro ao deserializar carta: %v\n", err)
 		return false
 	}
 
-	fmt.Printf("DEBUG: Processando carta %s do jogador %s\n", req.Card.Name, in.PlayerUID)
+	//fmt.Printf("DEBUG: Processando carta %s do jogador %s\n", req.Card.Name, in.PlayerUID)
 
 	// remove a carta da mão
 	if !m.removeFromHand(in.PlayerUID, &req.Card) {
@@ -523,11 +523,11 @@ func (m *Match) handleGiveUp(enc1, enc2 *json.Encoder, in matchMsg) {
 
 // atualiza estado do jogo (sanidade, estados de sonho)
 func (m *Match) updateGameState(enc1, enc2 *json.Encoder) {
-	fmt.Printf("DEBUG: Atualizando estado do jogo - Round %d\n", m.currentRound)
+	//fmt.Printf("DEBUG: Atualizando estado do jogo - Round %d\n", m.currentRound)
 
 	// aplica efeitos dos estados de sonho
 	for playerUID, state := range m.DreamStates {
-		oldSanity := m.Sanity[playerUID]
+		//oldSanity := m.Sanity[playerUID]
 
 		switch state {
 		case sleepy:
@@ -559,8 +559,8 @@ func (m *Match) updateGameState(enc1, enc2 *json.Encoder) {
 			m.Sanity[playerUID] = 0
 		}
 
-		fmt.Printf("DEBUG: Estado %s aplicado ao jogador %s: %d -> %d\n",
-			string(state), playerUID, oldSanity, m.Sanity[playerUID])
+		//fmt.Printf("DEBUG: Estado %s aplicado ao jogador %s: %d -> %d\n",
+		//	string(state), playerUID, oldSanity, m.Sanity[playerUID])
 	}
 
 	// envia informações atualizadas
@@ -589,6 +589,6 @@ func (m *Match) sendUpdateInfo(enc1, enc2 *json.Encoder) {
 	_ = enc1.Encode(msg)
 	_ = enc2.Encode(msg)
 
-	fmt.Printf("DEBUG: Update enviado - P1 sanidade: %d, P2 sanidade: %d\n",
-		m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
+	//fmt.Printf("DEBUG: Update enviado - P1 sanidade: %d, P2 sanidade: %d\n",
+	//	m.Sanity[m.P1.UID], m.Sanity[m.P2.UID])
 }
