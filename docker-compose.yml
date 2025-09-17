@@ -12,7 +12,7 @@ services:
     networks:
       - go-net
 
-  # Serviço do Cliente 
+  # serviço do cliente 
   client:
     build:
       context: ./client
@@ -22,7 +22,17 @@ services:
     networks:
       - go-net
     stdin_open: true # nao tirar (input funfa)
-    tty: true      
+    tty: true    
+
+  # serviço dos bots  
+  bots:
+    build:
+      context: .
+    container_name: bots
+    depends_on:
+      - server
+    networks:
+      - go-net
     
 networks:
   go-net:

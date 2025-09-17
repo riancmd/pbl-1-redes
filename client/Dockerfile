@@ -1,16 +1,17 @@
-# Usa imagem oficial do Go
+# usa imagem do golang 1.25!! tem que ser 1.25
 FROM golang:1.25
 
+# diretorio de trabalho
 WORKDIR /app
 
-# Copia o código
+# copia o código
 COPY . .
 
-# Compila o cliente
+# compila
 RUN go build -o client
 
-# Garante permissão de execução no binário
+# permissao de exec binário
 RUN chmod +x ./client
 
-# Comando para iniciar o cliente
+# comando p iniciar client
 CMD ["./client"]
