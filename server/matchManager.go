@@ -152,11 +152,11 @@ func (m *Match) run() {
 		time.Sleep(500 * time.Millisecond)
 
 		// processa o turno
-		//actionTaken := m.processTurn(enc1, enc2)
+		actionTaken := m.processTurn(enc1, enc2)
 
-		//if !actionTaken {
-		//	fmt.Printf("DEBUG: Nenhuma ação foi tomada no turno\n")
-		//}
+		if !actionTaken {
+			fmt.Printf("DEBUG: Nenhuma ação foi tomada no turno\n")
+		}
 
 		// atualiza estados e sanidade
 		m.updateGameState(enc1, enc2)
@@ -430,8 +430,6 @@ func (m *Match) applyCardEffect(playerUID string, card *Card, opponentUID string
 	} else {
 		targetUID = opponentUID
 	}
-
-	//oldSanity := m.Sanity[targetUID]
 
 	switch card.CardType {
 	case Pill:

@@ -533,6 +533,8 @@ func printInventory() {
 		fmt.Println(strings.Repeat("-", 40))
 	}
 
+	time.Sleep(2 * time.Second)
+
 }
 
 func printHand() {
